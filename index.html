@@ -407,7 +407,6 @@
             </div>
         </div>
         
-        <!-- NEW: Example Song Loader -->
         <div class="control-group">
             <label for="example-song-select">Load Example Song</label>
             <select id="example-song-select">
@@ -737,11 +736,13 @@
 
         function scheduler() { while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) { scheduleNote(currentStep, nextNoteTime); nextNote(); } }
         
+        // --- COMPLETELY REWRITTEN AND FIXED SONG PLAYBACK LOGIC ---
         function nextNote() {
-            const timePerStep = (60.0 / bpm) / 4;
+            const timePerStep = (60.0 / bpm) / 4.0;
             nextNoteTime += timePerStep;
 
             let activeId = isSongPlaying ? currentSongSequencerId : document.querySelector('.play-button.playing')?.dataset.sequencerId;
+
             if (!activeId || !sequencersData[activeId]) {
                 stop();
                 return;
@@ -749,30 +750,27 @@
 
             const numSteps = sequencersData[activeId].steps;
             
-            // If the next step is the last step of the current section
-            if (currentStep >= numSteps - 1) {
+            currentStep++;
+
+            if (currentStep >= numSteps) {
                 if (isSongPlaying) {
-                    let nextSectionIndex = currentSongSectionIndex + 1;
-                    if (nextSectionIndex >= songStructure.length) {
-                        nextSectionIndex = 0; // Loop song
+                    currentSongSectionIndex++;
+                    if (currentSongSectionIndex >= songStructure.length) {
+                        currentSongSectionIndex = 0; // Loop song from the beginning
                     }
                     
-                    const nextSectionName = songStructure[nextSectionIndex];
+                    const nextSectionName = songStructure[currentSongSectionIndex];
                     const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === nextSectionName);
-
+                    
                     if (nextSequencer) {
-                        currentSongSectionIndex = nextSectionIndex;
                         currentSongSequencerId = nextSequencer[0];
-                        currentStep = 0; // Reset step for the new section
                     } else {
-                        console.error(`Song section "${nextSectionName}" not found. Stopping.`);
+                        console.error(`Song section "${nextSectionName}" not found. Stopping playback.`);
                         stop();
+                        return;
                     }
-                } else {
-                    currentStep = 0; // Loop current sequencer
                 }
-            } else {
-                currentStep++; // Advance step within the current section
+                currentStep = 0; // Reset step for the next (or same) section
             }
         }
 
@@ -812,20 +810,21 @@
         
         async function togglePlay(sequencerId, isSongMode = false) {
              await initAudio();
-             isSongPlaying = isSongMode;
-             if ((isPlaying && !isSongMode) || (isSongPlaying && isSongMode)) {
+             
+             if (isPlaying) {
                  stop();
+                 // If we were trying to start a different mode, start it after stopping
+                 if ((isSongMode && !isSongPlaying) || (!isSongMode && sequencerId !== document.querySelector('.play-button.playing')?.dataset.sequencerId)) {
+                     // short delay to allow state to clear
+                     setTimeout(() => togglePlay(sequencerId, isSongMode), 50);
+                 }
                  return;
              }
+
              if (audioContext.state === 'suspended') await audioContext.resume();
              
              isPlaying = true;
-             document.querySelectorAll('.play-button').forEach(b => {
-                 b.classList.remove('playing');
-                 if(b.dataset.sequencerId) b.textContent = 'Play';
-             });
-             songPlayBtn.classList.remove('playing');
-             songPlayBtn.textContent = 'Song Play';
+             isSongPlaying = isSongMode;
 
              if (isSongMode) {
                  songPlayBtn.classList.add('playing');
@@ -841,7 +840,8 @@
         }
 
         function stop() {
-            isPlaying = false; isSongPlaying = false;
+            isPlaying = false; 
+            isSongPlaying = false;
             clearInterval(schedulerTimerID);
             document.querySelectorAll('.play-button').forEach(b => { 
                 b.classList.remove('playing');
@@ -857,7 +857,7 @@
         }
 
         function playSong() {
-            if (isSongPlaying) {
+            if (isPlaying) {
                 stop();
                 return;
             }
@@ -929,13 +929,19 @@
         }
 
         function exportSongToMidi() {
+            // FIXED: Add check to ensure MidiWriter is loaded
+            if (typeof window.MidiWriter === 'undefined') {
+                alert('MIDI library is not ready yet. Please try again in a moment.');
+                console.error('MidiWriter object not found on window.');
+                return;
+            }
+
             try {
                 const structureStr = songStructureInput.value.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
                 if (!structureStr) { alert('Please enter a song structure to export.'); return; }
                 
                 const songSections = [...structureStr];
                 
-                // FIXED: Explicitly use window.MidiWriter
                 const track = new window.MidiWriter.Track();
                 track.setTempo(bpm);
                 track.addEvent(new window.MidiWriter.ProgramChangeEvent({instrument: 1, channel: 10}));
@@ -985,14 +991,12 @@
             }
         }
         
-        // --- NEW: Example Song Loading Functions ---
         async function loadExampleSongs() {
             try {
                 const response = await fetch('songs.json');
                 if (!response.ok) throw new Error(`Could not load songs.json. Status: ${response.status}`);
                 exampleSongsData = await response.json();
                 
-                // Populate the dropdown
                 for (const songName in exampleSongsData) {
                     const option = document.createElement('option');
                     option.value = songName;
@@ -1006,7 +1010,7 @@
         }
         
         function clearAllSequencers() {
-            stop();
+            if(isPlaying) stop();
             sequencersContainer.innerHTML = '';
             sequencersData = {};
         }
@@ -1018,14 +1022,12 @@
             clearAllSequencers();
             
             const songData = exampleSongsData[songName];
-
-            // Create sequencers for each pattern defined in the song
+            
             for (const patternName in songData.patterns) {
                 createSequencer(patternName, patternName);
                 const pattern = songData.patterns[patternName];
                 const data = sequencersData[patternName];
 
-                // Apply the grid data from the pattern
                 for (const instrument in pattern) {
                     if (INSTRUMENTS.includes(instrument)) {
                         for (let i = 0; i < data.steps && i < pattern[instrument].length; i++) {
@@ -1036,7 +1038,6 @@
                 updateSequencerGrid(patternName, data.steps);
             }
             
-            // Set tempo and song structure
             tempoInput.value = songData.bpm;
             bpm = songData.bpm;
             songStructureInput.value = songData.structure;
@@ -1044,8 +1045,6 @@
             e.target.value = ""; // Reset dropdown
         }
 
-
-        // --- Initial Setup & Event Listeners ---
         tempoInput.addEventListener('change', (e) => bpm = parseInt(e.target.value, 10));
         tapTempoBtn.addEventListener('click', tapTempo);
         humanizeBtn.addEventListener('click', () => { isHumanizeOn = !isHumanizeOn; humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF"; humanizeBtn.classList.toggle('playing', isHumanizeOn); });
@@ -1062,8 +1061,6 @@
         };
         exampleSongSelect.addEventListener('change', handleLoadExampleSong);
 
-
-        // --- Initial Calls ---
         createSequencer('A', 'A');
         loadExampleSongs();
     });
