@@ -6,25 +6,28 @@
     <title>RockForge Drum Sequencer</title>
     <style>
         /* --- General & Theming --- */
+        /* Import a rock-style font from Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Metal+Mania&display=swap');
 
+        /* CSS Variables (Custom Properties) for easy theming and consistency */
         :root {
             --bg-color: #1a1a1a;
             --panel-bg: #2d2d2d;
             --border-color: #444;
-            --accent-color: #d44400;
-            --accent-hover: #ff6a00;
+            --accent-color: #d44400; /* Main orange/red color */
+            --accent-hover: #ff6a00; /* Lighter color for hover effects */
             --text-color: #e0e0e0;
             --font-family-header: 'Metal Mania', cursive;
             --font-family-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            --led-off: #3a3a3a;
-            --led-on: #ff4500;
-            --led-playhead: #fffa00;
-            --danger-color: #c00;
+            --led-off: #3a3a3a; /* Color for an inactive step */
+            --led-on: #ff4500;  /* Color for an active step */
+            --led-playhead: #fffa00; /* Color for the currently playing step */
+            --danger-color: #c00; /* Color for destructive actions like 'remove' */
         }
 
         body {
             background-color: var(--bg-color);
+            /* A trick to create a subtle grid background using linear gradients */
             background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
                               linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
             background-size: 20px 20px;
@@ -34,6 +37,7 @@
             padding: 15px;
         }
 
+        /* Utility class to hide elements */
         .hidden {
             display: none !important;
         }
@@ -46,11 +50,12 @@
             padding: 15px 25px;
             margin-bottom: 20px;
             box-shadow: 0 0 15px rgba(0,0,0,0.7);
+            /* Flexbox for arranging control groups */
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: wrap; /* Allow items to wrap to the next line on smaller screens */
             align-items: center;
             gap: 20px;
-            justify-content: space-around;
+            justify-content: space-around; /* Distribute items nicely */
         }
 
         #top-controls h1 {
@@ -59,11 +64,12 @@
             font-size: 2.8em;
             margin: 0;
             text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
-            flex-basis: 100%;
+            flex-basis: 100%; /* Make the title take the full width */
             text-align: center;
             margin-bottom: 10px;
         }
         
+        /* A styled container for a related set of controls (e.g., Tempo, MIDI) */
         .control-group {
             display: flex;
             flex-direction: column;
@@ -81,6 +87,7 @@
             text-transform: uppercase;
         }
 
+        /* Styling for all input fields and select dropdowns */
         input[type="number"], input[type="text"], select {
             background: #111;
             border: 1px solid #555;
@@ -107,30 +114,32 @@
             width: 170px;
         }
 
-        /* --- Buttons --- */
+        /* --- Button Styles --- */
         button {
             font-family: var(--font-family-body);
             font-weight: bold;
             background: linear-gradient(to bottom, #666, #444);
             color: var(--text-color);
-            border: 2px outset #555;
+            border: 2px outset #555; /* 3D-style border */
             border-radius: 5px;
             padding: 8px 15px;
             cursor: pointer;
             transition: all 0.1s ease;
-            box-shadow: 0 3px 0 #222;
+            box-shadow: 0 3px 0 #222; /* Faux 3D shadow */
         }
         
         button:hover {
             background: linear-gradient(to bottom, #777, #555);
         }
 
+        /* Simulates the button being pressed down */
         button:active {
             transform: translateY(2px);
             box-shadow: 0 1px 0 #222;
             border-style: inset;
         }
         
+        /* Special style for a button when it's in a 'playing' state */
         button.play-button.playing {
             background: linear-gradient(to bottom, #00b33c, #008a2e);
             color: white;
@@ -138,6 +147,7 @@
             text-shadow: 0 0 5px white;
         }
 
+        /* Style for primary call-to-action buttons */
         button.primary-action {
             background: linear-gradient(to bottom, var(--accent-color), #a03400);
             color: white;
@@ -148,6 +158,7 @@
              background: linear-gradient(to bottom, var(--accent-hover), #b1450f);
         }
         
+        /* Style for the 'remove sequencer' button */
         .remove-sequencer-btn {
             background: linear-gradient(to bottom, #900, var(--danger-color));
             color: white;
@@ -195,11 +206,13 @@
             text-align: center;
         }
 
+        /* The main grid of steps for all instruments */
         .sequencer-grid {
-            overflow-x: auto;
+            overflow-x: auto; /* Allow horizontal scrolling if steps exceed screen width */
             padding-bottom: 10px;
         }
 
+        /* A single row for one instrument */
         .instrument-row {
             display: flex;
             align-items: center;
@@ -219,13 +232,14 @@
             border-radius: 4px;
         }
         
+        /* Header within a row, contains the label and show/hide button */
         .row-controls-header {
             display: flex;
             gap: 5px;
         }
 
         .instrument-label {
-            flex-grow: 1;
+            flex-grow: 1; /* Allows the label to take up remaining space */
             background: #3a3a3a;
             text-align: center;
             font-weight: bold;
@@ -247,7 +261,9 @@
             font-size: 1.2em;
         }
 
+        /* The container for Volume, Pan, etc. that can be hidden */
         .extra-controls {
+            /* Using CSS Grid for a clean, structured layout of controls */
             display: grid;
             grid-template-areas:
                 "vol-label vol-label"
@@ -269,6 +285,7 @@
             color: #aaa;
             justify-self: start;
         }
+        /* Assigning each control to its named grid area */
         .extra-controls .vol-label { grid-area: vol-label; }
         .extra-controls .volume-slider { grid-area: volume; width: 100%; margin: 0; }
         .extra-controls .pan-label { grid-area: pan-label; }
@@ -277,7 +294,7 @@
         .extra-controls .rnd-row-btn { grid-area: rnd-btn; font-size: 0.8em; padding: 4px;}
         .extra-controls .clear-row-btn { grid-area: clear-btn; font-size: 0.8em; padding: 4px;}
 
-
+        /* --- Step Sequencer Grid Styles --- */
         .steps-container {
             display: flex;
             gap: 5px;
@@ -291,7 +308,7 @@
         }
 
         .step-checkbox {
-            -webkit-appearance: none;
+            -webkit-appearance: none; /* Removes default browser styling for checkbox */
             appearance: none;
             width: 35px;
             height: 35px;
@@ -307,6 +324,7 @@
             box-shadow: 0 0 10px var(--led-on);
         }
         
+        /* Class added by JS to highlight the currently playing step */
         .step-checkbox.playing {
             outline: 2px solid var(--led-playhead);
             box-shadow: 0 0 10px var(--led-playhead);
@@ -315,20 +333,19 @@
         .velocity-slider {
             -webkit-appearance: none;
             appearance: none;
-            width: 35px;
-            height: 8px;
             background: #444;
             outline: none;
             border-radius: 4px;
-            writing-mode: bt-lr; /* IE */
-            -webkit-appearance: slider-vertical; /* WebKit */
+            /* Tricks to make a range slider vertical */
+            -webkit-appearance: slider-vertical;
+            writing-mode: bt-lr; 
             transform: rotate(180deg);
             height: 50px;
             width: 10px;
             cursor: pointer;
         }
 
-        /* --- Sliders --- */
+        /* --- Generic Slider Styles --- */
         input[type=range] {
             -webkit-appearance: none;
             appearance: none;
@@ -350,7 +367,7 @@
             border: 2px solid var(--text-color);
             cursor: pointer;
             border-radius: 50%;
-            margin-top: -3px;
+            margin-top: -3px; /* Align thumb vertically */
         }
 
         input[type=range]:hover::-webkit-slider-thumb {
@@ -361,6 +378,7 @@
 </head>
 <body>
 
+    <!-- Container for all the master controls at the top of the page -->
     <div id="top-controls">
         <h1>RockForge Drum Sequencer</h1>
 
@@ -415,11 +433,10 @@
         </div>
     </div>
 
-    <div id="sequencers-container">
-        <!-- Sequencers will be inserted here by JavaScript -->
-    </div>
+    <!-- This container will be dynamically filled with sequencer UI by JavaScript -->
+    <div id="sequencers-container"></div>
     
-    <!-- MIDI Writer Library (embedded) -->
+    <!-- MIDI Writer Library (embedded for single-file convenience) -->
     <script>
         /*
         * A JavaScript class for generating MIDI files.
@@ -430,51 +447,58 @@
     </script>
 
     <script>
+    // This event listener ensures that the entire script runs only after the
+    // HTML document has been fully loaded and parsed.
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Core Audio & State Variables ---
-        let audioContext;
-        const audioBuffers = {};
-        let isPlaying = false;
-        let isSongPlaying = false;
-        let currentStep = 0;
-        let bpm = 120;
-        let humanizeAmount = 0;
-        let isHumanizeOn = false;
-        let sequencersData = {};
+        // --- GLOBAL STATE & CORE VARIABLES ---
+        let audioContext; // The heart of the Web Audio API, manages all audio operations.
+        const audioBuffers = {}; // An object to store pre-loaded audio files (samples) for quick access.
+        let isPlaying = false; // A boolean flag to track the master playback state.
+        let isSongPlaying = false; // A boolean flag specific to song mode playback.
+        let currentStep = 0; // The currently active step in the sequencer (0-indexed).
+        let bpm = 120; // The tempo in Beats Per Minute.
+        let humanizeAmount = 0; // The amount of randomization for timing and velocity (0 to 1).
+        let isHumanizeOn = false; // Flag to enable/disable the humanize feature.
+        let sequencersData = {}; // The single source of truth for ALL sequencer data (grids, volumes, pans, etc.).
 
-        // --- Playback Scheduling ---
-        let schedulerTimerID;
-        let nextNoteTime = 0.0;
-        const scheduleAheadTime = 0.1; // seconds
+        // --- PLAYBACK SCHEDULING VARIABLES ---
+        let schedulerTimerID; // The ID of the setInterval timer used for scheduling notes.
+        let nextNoteTime = 0.0; // The precise time (in seconds) when the next note should be played.
+        const scheduleAheadTime = 0.1; // How far ahead (in seconds) to schedule audio to prevent stuttering.
 
-        // --- Song Mode State ---
-        let songStructure = [];
-        let currentSongSectionIndex = 0;
-        let currentSongSequencerId = '';
+        // --- SONG MODE STATE ---
+        let songStructure = []; // An array representing the sequence of patterns (e.g., ['A', 'B', 'A', 'B']).
+        let currentSongSectionIndex = 0; // The index of the current section being played from the songStructure array.
+        let currentSongSequencerId = ''; // The ID ('A', 'B', etc.) of the currently playing sequencer in song mode.
         
-        // --- MIDI & Example Song Data ---
-        let midiAccess = null;
-        let currentMidiInput = null;
-        let currentMidiOutput = null;
-        let exampleSongsData = {};
+        // --- MIDI & EXAMPLE SONG DATA ---
+        let midiAccess = null; // The main object returned by the Web MIDI API.
+        let currentMidiInput = null; // The currently selected MIDI input device.
+        let currentMidiOutput = null; // The currently selected MIDI output device.
+        let exampleSongsData = {}; // Will be populated by fetching songs.json.
 
+        // --- CONSTANTS ---
         const INSTRUMENTS = [
             'crash1', 'crash2', 'ride', 'china',
             'tom1', 'tom2', 'tom3', 'floor-tom',
             'hi-hat-open', 'hi-hat-closed', 'snare', 'kick'
         ];
         
+        // Maps instrument names to specific MIDI note numbers for MIDI export and output.
         const INSTRUMENT_MIDI_NOTES = {
             'kick': 36, 'snare': 38, 'hi-hat-closed': 42, 'hi-hat-open': 46, 'floor-tom': 41, 
             'tom3': 43, 'tom2': 45, 'tom1': 47, 'crash1': 49, 'crash2': 57, 'ride': 51, 'china': 52
         };
 
+        // Maps incoming MIDI note numbers to instrument names. Allows multiple notes to trigger one sample.
         const midiNoteToInstrumentMap = {
             36: 'kick', 35: 'kick', 38: 'snare', 40: 'snare', 42: 'hi-hat-closed', 44: 'hi-hat-closed',
             46: 'hi-hat-open', 41: 'floor-tom', 43: 'floor-tom', 45: 'tom2', 47: 'tom2', 48: 'tom1',
             50: 'tom1', 49: 'crash1', 57: 'crash2', 51: 'ride', 52: 'china', 55: 'crash1', 59: 'ride',
         };
 
+        // --- DOM ELEMENT REFERENCES ---
+        // Caching references to frequently used DOM elements for better performance.
         const sequencersContainer = document.getElementById('sequencers-container');
         const tempoInput = document.getElementById('tempo-input');
         const tapTempoBtn = document.getElementById('tap-tempo-btn');
@@ -491,8 +515,14 @@
         const midiOutSelect = document.getElementById('midi-out-select');
         const exampleSongSelect = document.getElementById('example-song-select');
         
+        // --- INITIALIZATION FUNCTIONS ---
+
+        /**
+         * Initializes the Web Audio API context. This must be done in response to a user gesture.
+         * Also triggers the loading of all audio samples.
+         */
         async function initAudio() {
-            if (audioContext) return;
+            if (audioContext) return; // Prevent re-initialization.
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 await loadAllSamples();
@@ -501,6 +531,11 @@
                 console.error(e);
             }
         }
+
+        /**
+         * Fetches a single .wav file from the root folder, decodes it, and stores it in audioBuffers.
+         * @param {string} instrument - The name of the instrument (e.g., 'kick').
+         */
         async function loadSample(instrument) {
             try {
                 const response = await fetch(`${instrument}.wav`);
@@ -512,18 +547,31 @@
                 alert(`Failed to load sample: ${instrument}.wav. Ensure file exists.`);
             }
         }
+
+        /**
+         * Triggers the loading of all required audio samples concurrently.
+         */
         async function loadAllSamples() {
             await Promise.all(INSTRUMENTS.map(loadSample));
             console.log('All samples loaded.');
         }
 
+        // --- SEQUENCER UI MANAGEMENT ---
+
+        /**
+         * Creates the entire HTML structure for a new sequencer and adds it to the DOM.
+         * @param {string} id - The unique ID for the new sequencer (e.g., 'A', 'B').
+         * @param {string} name - The display name for the new sequencer.
+         */
         function createSequencer(id, name) {
             const sequencerDiv = document.createElement('div');
             sequencerDiv.className = 'sequencer-container';
             sequencerDiv.id = `sequencer-${id}`;
 
+            // Initialize the data object for this new sequencer.
             sequencersData[id] = { name: name, steps: 16, grid: {}, volumes: {}, velocities: {}, panning: {} };
 
+            // Build the header HTML using a template literal for readability.
             const header = document.createElement('div');
             header.className = 'sequencer-header';
             header.innerHTML = `
@@ -548,6 +596,10 @@
             addSequencerHeaderEventListeners(id);
         }
 
+        /**
+         * Attaches event listeners to the controls in a sequencer's header.
+         * @param {string} id - The ID of the sequencer to attach listeners to.
+         */
         function addSequencerHeaderEventListeners(id) {
             const header = document.querySelector(`#sequencer-${id} .sequencer-header`);
             header.querySelector('.remove-sequencer-btn').onclick = handleRemoveSequencer;
@@ -568,6 +620,9 @@
             header.querySelector('.play-button').onclick = () => togglePlay(id);
         }
         
+        /**
+         * Handles the removal of a sequencer from the DOM and the data model.
+         */
         function handleRemoveSequencer(e) {
             const sequencerId = e.target.dataset.sequencerId;
             if (confirm(`Are you sure you want to remove sequencer "${sequencersData[sequencerId].name}"?`)) {
@@ -580,13 +635,20 @@
             }
         }
         
+        /**
+         * Re-draws the entire grid for a given sequencer. Called when steps change or patterns are loaded.
+         * @param {string} sequencerId - The ID of the sequencer to update.
+         * @param {number} numSteps - The number of steps to draw.
+         */
         function updateSequencerGrid(sequencerId, numSteps) {
             const gridDiv = document.querySelector(`#sequencer-${sequencerId} .sequencer-grid`);
-            gridDiv.innerHTML = '';
+            gridDiv.innerHTML = ''; // Clear previous grid
             
             const data = sequencersData[sequencerId];
 
+            // Loop through each instrument to create a row
             INSTRUMENTS.forEach(instrument => {
+                // Initialize data structures if they don't exist
                 if (!data.grid[instrument]) data.grid[instrument] = Array(64).fill(false);
                 if (!data.velocities[instrument]) data.velocities[instrument] = Array(64).fill(100);
                 if (data.volumes[instrument] === undefined) data.volumes[instrument] = 0.8;
@@ -595,6 +657,7 @@
                 const row = document.createElement('div');
                 row.className = 'instrument-row';
 
+                // Build the left-hand side controls for the row
                 const rowControls = document.createElement('div');
                 rowControls.className = 'row-controls';
                 rowControls.innerHTML = `
@@ -613,6 +676,7 @@
                     </div>
                 `;
 
+                // Build the container for the step checkboxes and velocity sliders
                 const stepsContainer = document.createElement('div');
                 stepsContainer.className = 'steps-container';
                 for (let i = 0; i < numSteps; i++) {
@@ -627,9 +691,14 @@
                 row.append(rowControls, stepsContainer);
                 gridDiv.appendChild(row);
             });
+            // Attach event listeners to all newly created elements
             addGridEventListeners(sequencerId);
         }
         
+        /**
+         * Attaches event listeners to all the interactive elements within a sequencer's grid.
+         * @param {string} sequencerId - The ID of the sequencer.
+         */
         function addGridEventListeners(sequencerId) {
             const container = document.getElementById(`sequencer-${sequencerId}`);
             container.querySelectorAll('.step-checkbox').forEach(cb => cb.onchange = handleStepChange);
@@ -645,6 +714,9 @@
             container.querySelectorAll('.clear-row-btn').forEach(btn => btn.onclick = handleClearRow);
         }
 
+        // --- EVENT HANDLER FUNCTIONS ---
+
+        /** Fired when user clicks 'Insert'. Creates the specified number of new sequencers. */
         function handleInsertSequencers() {
             const amount = parseInt(sequencerAmountInput.value, 10);
             let nextCharIndex = 0;
@@ -660,6 +732,8 @@
                 createSequencer(newName, newName);
             }
         }
+
+        /** Fired when user changes a sequencer's name. Ensures names are unique. */
         function handleNameChange(e) {
             const newName = e.target.value.toUpperCase();
             const oldName = e.target.dataset.oldName;
@@ -673,10 +747,16 @@
             e.target.dataset.oldName = newName;
         }
 
+        /** Fired when a step checkbox is clicked. Updates the main data object. */
         function handleStepChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].grid[instrument][step] = e.target.checked; }
+        /** Fired when a velocity slider is moved. Updates the main data object. */
         function handleVelocityChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].velocities[instrument][step] = parseInt(e.target.value, 10); }
+        /** Fired when a row's volume slider is moved. Updates the main data object. */
         function handleVolumeChange(e) { const { instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].volumes[instrument] = parseFloat(e.target.value); }
+        /** Fired when a row's panning slider is moved. Updates the main data object. */
         function handlePanningChange(e) { const { instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].panning[instrument] = parseFloat(e.target.value); }
+        
+        /** Fired when an instrument label is clicked. Plays the sample and toggles the current step if playing. */
         function handleLabelClick(e) {
             const { instrument, sequencerId } = e.target.dataset;
             const data = sequencersData[sequencerId];
@@ -686,33 +766,52 @@
                 const stepCheckbox = document.querySelector(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-instrument="${instrument}"][data-step="${currentStep}"]`);
                 if (stepCheckbox) {
                     stepCheckbox.checked = !stepCheckbox.checked;
-                    stepCheckbox.dispatchEvent(new Event('change'));
+                    stepCheckbox.dispatchEvent(new Event('change')); // Trigger the change event to update data
                 }
             }
         }
+
+        /** Fired when the 'Velocity' button is clicked. Toggles visibility of all velocity sliders in that row. */
         function handleVelocityToggle(e) {
             const row = e.target.closest('.instrument-row');
             row.querySelectorAll('.velocity-slider').forEach(slider => slider.classList.toggle('hidden'));
         }
+
+        /** Fired when a row's 'RND' button is clicked. Randomizes the steps in that row. */
         function handleRandomizeRow(e) {
             const { instrument, sequencerId } = e.target.dataset;
             const data = sequencersData[sequencerId];
             for (let i = 0; i < data.steps; i++) {
-                data.grid[instrument][i] = Math.random() > 0.6;
+                data.grid[instrument][i] = Math.random() > 0.6; // 40% chance of being active
             }
-            updateSequencerGrid(sequencerId, data.steps);
+            updateSequencerGrid(sequencerId, data.steps); // Redraw the grid to reflect changes
         }
+
+        /** Fired when a row's 'Clear' button is clicked. Clears all steps in that row. */
         function handleClearRow(e) {
             const { instrument, sequencerId } = e.target.dataset;
             sequencersData[sequencerId].grid[instrument].fill(false);
             updateSequencerGrid(sequencerId, sequencersData[sequencerId].steps);
         }
+
+        /** Fired when the 'RND All' button in a sequencer header is clicked. Randomizes the entire sequencer. */
         function randomizeSequencer(sequencerId) {
              const data = sequencersData[sequencerId];
              INSTRUMENTS.forEach(instrument => data.grid[instrument].forEach((_, i) => data.grid[instrument][i] = Math.random() > 0.7));
              updateSequencerGrid(sequencerId, data.steps);
         }
         
+        // --- CORE PLAYBACK ENGINE ---
+
+        /**
+         * Plays a single audio sample with specified parameters.
+         * This is the final step in the audio chain.
+         * @param {string} instrument - The name of the sample to play.
+         * @param {number} volume - The volume level for the instrument row (0-1).
+         * @param {number} panning - The stereo pan (-1 for left, 0 for center, 1 for right).
+         * @param {number} velocity - The note's velocity (1-127).
+         * @param {number} time - The precise AudioContext time to play the sample.
+         */
         function playSample(instrument, volume, panning = 0, velocity = 127, time) {
             if (!audioContext || !audioBuffers[instrument]) return;
 
@@ -734,9 +833,20 @@
             source.start(startTime);
         }
 
-        function scheduler() { while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) { scheduleNote(currentStep, nextNoteTime); nextNote(); } }
+        /**
+         * The high-level timer loop. It runs frequently and checks if it's time to schedule the next note.
+         */
+        function scheduler() {
+             while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
+                 scheduleNote(currentStep, nextNoteTime);
+                 nextNote();
+             }
+        }
         
-        // --- COMPLETELY REWRITTEN AND FIXED SONG PLAYBACK LOGIC ---
+        /**
+         * The "engine" of the sequencer. It advances the step counter and handles transitions
+         * between sections when in song mode.
+         */
         function nextNote() {
             const timePerStep = (60.0 / bpm) / 4.0;
             nextNoteTime += timePerStep;
@@ -750,72 +860,99 @@
 
             const numSteps = sequencersData[activeId].steps;
             
-            currentStep++;
-
-            if (currentStep >= numSteps) {
+            // If we are on the last step of the current section
+            if (currentStep >= numSteps - 1) {
                 if (isSongPlaying) {
-                    currentSongSectionIndex++;
+                    currentSongSectionIndex++; // Move to the next section in the song structure
                     if (currentSongSectionIndex >= songStructure.length) {
-                        currentSongSectionIndex = 0; // Loop song from the beginning
+                        currentSongSectionIndex = 0; // Loop the whole song
                     }
                     
                     const nextSectionName = songStructure[currentSongSectionIndex];
                     const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === nextSectionName);
                     
                     if (nextSequencer) {
-                        currentSongSequencerId = nextSequencer[0];
+                        currentSongSequencerId = nextSequencer[0]; // Set the new active sequencer
                     } else {
                         console.error(`Song section "${nextSectionName}" not found. Stopping playback.`);
                         stop();
                         return;
                     }
                 }
-                currentStep = 0; // Reset step for the next (or same) section
+                currentStep = 0; // Reset step counter for the next section (or for looping the current one)
+            } else {
+                currentStep++; // Simply advance to the next step
             }
         }
 
+        /**
+         * Schedules the notes for a single step to be played at a precise time.
+         * It checks the grid and triggers audio samples and MIDI Out messages.
+         * @param {number} step - The step number to schedule.
+         * @param {number} time - The precise AudioContext time for playback.
+         */
         function scheduleNote(step, time) {
             let activeSequencerId = isSongPlaying ? currentSongSequencerId : document.querySelector('.play-button.playing')?.dataset.sequencerId;
             if(!activeSequencerId || !sequencersData[activeSequencerId]) return;
             const data = sequencersData[activeSequencerId];
+
+            // Check every instrument for the given step
             INSTRUMENTS.forEach(instrument => {
                 if (data.grid[instrument][step]) {
                     const velocity = data.velocities[instrument][step];
+                    // 1. Trigger the internal audio sample
                     playSample(instrument, data.volumes[instrument], data.panning[instrument], velocity, time);
+                    // 2. Send a MIDI Out message if an output device is selected
                     if (currentMidiOutput && INSTRUMENT_MIDI_NOTES[instrument]) {
                         const note = INSTRUMENT_MIDI_NOTES[instrument];
-                        const channel = 9; // MIDI channel 10
+                        const channel = 9; // MIDI channel 10 for drums (0-indexed)
                         const noteOnMessage = [0x90 + channel, note, velocity];
                         const noteOffMessage = [0x80 + channel, note, 0];
-                        const noteDuration = 200;
+                        const noteDuration = 200; // Duration in ms
                         const sendTime = window.performance.now() + (time - audioContext.currentTime) * 1000;
                         currentMidiOutput.send(noteOnMessage, sendTime);
                         currentMidiOutput.send(noteOffMessage, sendTime + noteDuration);
                     }
                 }
             });
+            // Schedule the visual update of the playhead
             setTimeout(() => updatePlayhead(step, activeSequencerId), (time - audioContext.currentTime) * 1000);
         }
 
+        /**
+         * Updates the UI to show which step is currently playing.
+         * @param {number} step - The step number to highlight.
+         * @param {string} sequencerId - The ID of the currently active sequencer.
+         */
         let lastPlayhead = { step: -1, id: null };
         function updatePlayhead(step, sequencerId) {
+             // Remove highlight from the previous step
              if (lastPlayhead.id && document.getElementById(`sequencer-${lastPlayhead.id}`)) {
                 document.querySelectorAll(`.step-checkbox[data-sequencer-id="${lastPlayhead.id}"][data-step="${lastPlayhead.step}"]`).forEach(el => el.classList.remove('playing'));
              }
+             // Add highlight to the current step
              if (document.getElementById(`sequencer-${sequencerId}`)) {
                 document.querySelectorAll(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-step="${step}"]`).forEach(el => el.classList.add('playing'));
              }
              lastPlayhead = { step, id: sequencerId };
         }
         
+        // --- MASTER PLAYBACK CONTROLS ---
+
+        /**
+         * Toggles the playback state (Play/Stop) for a single sequencer or the entire song.
+         * @param {string|null} sequencerId - The ID of the sequencer to play, or null for song mode.
+         * @param {boolean} isSongMode - True if starting song playback.
+         */
         async function togglePlay(sequencerId, isSongMode = false) {
              await initAudio();
              
+             // If we're already playing, stop everything first.
              if (isPlaying) {
+                 const wasSongPlaying = isSongPlaying;
                  stop();
-                 // If we were trying to start a different mode, start it after stopping
-                 if ((isSongMode && !isSongPlaying) || (!isSongMode && sequencerId !== document.querySelector('.play-button.playing')?.dataset.sequencerId)) {
-                     // short delay to allow state to clear
+                 // If we intended to start a *different* mode, start it after a brief delay.
+                 if (isSongMode !== wasSongPlaying || (sequencerId && sequencerId !== lastPlayhead.id)) {
                      setTimeout(() => togglePlay(sequencerId, isSongMode), 50);
                  }
                  return;
@@ -826,6 +963,7 @@
              isPlaying = true;
              isSongPlaying = isSongMode;
 
+             // Update button UI
              if (isSongMode) {
                  songPlayBtn.classList.add('playing');
                  songPlayBtn.textContent = 'Song Stop';
@@ -836,19 +974,25 @@
              
              currentStep = 0;
              nextNoteTime = audioContext.currentTime;
-             schedulerTimerID = setInterval(scheduler, 25.0);
+             schedulerTimerID = setInterval(scheduler, 25.0); // Start the scheduler loop
         }
 
+        /**
+         * Stops all playback and resets the playback state.
+         */
         function stop() {
             isPlaying = false; 
             isSongPlaying = false;
-            clearInterval(schedulerTimerID);
+            clearInterval(schedulerTimerID); // Stop the scheduler loop
+
+            // Reset all play buttons to their 'stopped' state
             document.querySelectorAll('.play-button').forEach(b => { 
                 b.classList.remove('playing');
                 if(b.id === 'song-play-btn') b.textContent = 'Song Play';
                 else if (b.dataset.sequencerId) b.textContent = 'Play';
             });
 
+            // Clear the playhead highlight
             if (lastPlayhead.id && document.getElementById(`sequencer-${lastPlayhead.id}`)) {
                 document.querySelectorAll(`.step-checkbox[data-sequencer-id="${lastPlayhead.id}"]`).forEach(el => el.classList.remove('playing'));
             }
@@ -856,8 +1000,11 @@
             currentStep = 0;
         }
 
+        /**
+         * Initializes and starts song mode playback.
+         */
         function playSong() {
-            if (isPlaying) {
+            if (isSongPlaying) { // If song is already playing, stop it.
                 stop();
                 return;
             }
@@ -878,7 +1025,7 @@
                 if (firstSequencerEntry) {
                     currentSongSequencerId = firstSequencerEntry[0];
                     currentSongSectionIndex = 0;
-                    togglePlay(null, true);
+                    togglePlay(null, true); // Start playback in song mode
                 }
             } catch(error) {
                 console.error("Error starting song playback:", error);
@@ -887,12 +1034,15 @@
             }
         }
 
+        // --- UTILITY & MIDI FUNCTIONS ---
+
+        /** Calculates BPM based on the timing of user taps. */
         let lastTap = 0; let tapTimes = [];
         function tapTempo() {
             const now = Date.now();
-            if (now - lastTap > 2000) tapTimes = [];
+            if (now - lastTap > 2000) tapTimes = []; // Reset after 2 seconds
             lastTap = now; tapTimes.push(now);
-            if (tapTimes.length > 4) tapTimes.shift();
+            if (tapTimes.length > 4) tapTimes.shift(); // Keep only the last 4 taps
             if (tapTimes.length > 1) {
                 const average = (tapTimes[tapTimes.length - 1] - tapTimes[0]) / (tapTimes.length - 1);
                 bpm = Math.max(20, Math.min(300, Math.round(60000 / average)));
@@ -900,9 +1050,13 @@
             }
         }
         
+        /** Initializes the Web MIDI API and populates the device dropdowns. */
         function initMidi() {
-            if (navigator.requestMIDIAccess) navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
-            else alert("Web MIDI API is not supported in this browser.");
+            if (navigator.requestMIDIAccess) {
+                 navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
+            } else {
+                 alert("Web MIDI API is not supported in this browser.");
+            }
         }
         function onMIDISuccess(m) {
             midiAccess = m;
@@ -910,15 +1064,19 @@
             midiOutSelect.innerHTML = midiAccess.outputs.size > 0 ? '<option value="">Select MIDI Output...</option>' + [...midiAccess.outputs.values()].map(o => `<option value="${o.id}">${o.name}</option>`).join('') : '<option>No MIDI Output</option>';
         }
         function onMIDIFailure(msg) { console.error(`Failed to get MIDI access - ${msg}`); alert(`Failed to get MIDI access.`); }
+
+        /** Fired when a MIDI input device is selected. Attaches a message handler. */
         function selectMidiInput(e) {
-            if (currentMidiInput) currentMidiInput.onmidimessage = null;
+            if (currentMidiInput) currentMidiInput.onmidimessage = null; // Clean up old listener
             currentMidiInput = e.target.value ? midiAccess.inputs.get(e.target.value) : null;
             if (currentMidiInput) currentMidiInput.onmidimessage = handleMidiMessage;
         }
+        
+        /** Handles incoming MIDI messages, decoding them and playing the appropriate sample. */
         async function handleMidiMessage(message) {
             await initAudio();
             const [command, note, velocity] = message.data;
-            if (command === 144 && velocity > 0) {
+            if (command === 144 && velocity > 0) { // Note On command on channel 1
                 const instrument = midiNoteToInstrumentMap[note];
                 if (instrument) {
                     const firstSequencerId = Object.keys(sequencersData)[0];
@@ -928,8 +1086,9 @@
             }
         }
 
+        /** Exports the current song structure as a .mid file. */
         function exportSongToMidi() {
-            // FIXED: Add check to ensure MidiWriter is loaded
+            // FIXED: Add a guard to ensure the MidiWriter library is loaded.
             if (typeof window.MidiWriter === 'undefined') {
                 alert('MIDI library is not ready yet. Please try again in a moment.');
                 console.error('MidiWriter object not found on window.');
@@ -947,7 +1106,7 @@
                 track.addEvent(new window.MidiWriter.ProgramChangeEvent({instrument: 1, channel: 10}));
 
                 let totalTicks = 0;
-                const ticksPerStep = 128;
+                const ticksPerStep = 128; // 16th note in MidiWriter's default resolution
 
                 songSections.forEach(sectionName => {
                     const sequencerId = Object.keys(sequencersData).find(key => sequencersData[key].name === sectionName);
@@ -991,6 +1150,7 @@
             }
         }
         
+        /** Fetches and populates the example songs dropdown from songs.json. */
         async function loadExampleSongs() {
             try {
                 const response = await fetch('songs.json');
@@ -1009,12 +1169,14 @@
             }
         }
         
+        /** Clears the entire workspace of all sequencers. */
         function clearAllSequencers() {
             if(isPlaying) stop();
             sequencersContainer.innerHTML = '';
             sequencersData = {};
         }
 
+        /** Handles loading an example song from the dropdown. */
         function handleLoadExampleSong(e) {
             const songName = e.target.value;
             if (!songName) return;
@@ -1023,11 +1185,13 @@
             
             const songData = exampleSongsData[songName];
             
+            // Create a new sequencer for each pattern in the song data
             for (const patternName in songData.patterns) {
                 createSequencer(patternName, patternName);
                 const pattern = songData.patterns[patternName];
                 const data = sequencersData[patternName];
 
+                // Apply the grid data from the pattern to the newly created sequencer
                 for (const instrument in pattern) {
                     if (INSTRUMENTS.includes(instrument)) {
                         for (let i = 0; i < data.steps && i < pattern[instrument].length; i++) {
@@ -1038,13 +1202,17 @@
                 updateSequencerGrid(patternName, data.steps);
             }
             
+            // Set the song's tempo and structure in the main UI
             tempoInput.value = songData.bpm;
             bpm = songData.bpm;
             songStructureInput.value = songData.structure;
 
-            e.target.value = ""; // Reset dropdown
+            e.target.value = ""; // Reset dropdown to the placeholder text
         }
 
+
+        // --- INITIAL SETUP & EVENT LISTENERS ---
+        // Attaching all the top-level event listeners when the script first runs.
         tempoInput.addEventListener('change', (e) => bpm = parseInt(e.target.value, 10));
         tapTempoBtn.addEventListener('click', tapTempo);
         humanizeBtn.addEventListener('click', () => { isHumanizeOn = !isHumanizeOn; humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF"; humanizeBtn.classList.toggle('playing', isHumanizeOn); });
@@ -1061,6 +1229,8 @@
         };
         exampleSongSelect.addEventListener('change', handleLoadExampleSong);
 
+        // --- INITIAL CALLS ---
+        // Create the first default sequencer and fetch the example songs.
         createSequencer('A', 'A');
         loadExampleSongs();
     });
