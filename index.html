@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RockForge Drum Sequencer</title>
+    <style>
+        /* --- General & Theming --- */
+        @import url('https://fonts.googleapis.com/css2?family=Metal+Mania&display=swap');
+
+        :root {
+            --bg-color: #1a1a1a;
+            --panel-bg: #2d2d2d;
+            --border-color: #444;
+            --accent-color: #d44400;
+            --accent-hover: #ff6a00;
+            --text-color: #e0e0e0;
+            --font-family-header: 'Metal Mania', cursive;
+            --font-family-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --led-off: #3a3a3a;
+            --led-on: #ff4500;
+            --led-playhead: #fffa00;
+            --danger-color: #c00;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-color);
+            font-family: var(--font-family-body);
+            margin: 0;
+            padding: 15px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* --- Top Controls Section --- */
+        #top-controls {
+            background: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.7);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 20px;
+            justify-content: space-around;
+        }
+
+        #top-controls h1 {
+            font-family: var(--font-family-header);
+            color: var(--accent-color);
+            font-size: 2.8em;
+            margin: 0;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
+            flex-basis: 100%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: center;
+            background: #222;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .control-group label {
+            font-weight: bold;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        input[type="number"], input[type="text"], select {
+            background: #111;
+            border: 1px solid #555;
+            color: var(--text-color);
+            border-radius: 4px;
+            padding: 8px;
+            width: 80px;
+            text-align: center;
+            font-size: 1em;
+        }
+        
+        select {
+             width: 150px;
+             text-align: left;
+             padding: 7px;
+        }
+        
+        #song-structure-input {
+            width: 200px;
+            text-transform: uppercase;
+        }
+        
+        #example-song-select {
+            width: 170px;
+        }
+
+        /* --- Buttons --- */
+        button {
+            font-family: var(--font-family-body);
+            font-weight: bold;
+            background: linear-gradient(to bottom, #666, #444);
+            color: var(--text-color);
+            border: 2px outset #555;
+            border-radius: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 3px 0 #222;
+        }
+        
+        button:hover {
+            background: linear-gradient(to bottom, #777, #555);
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #222;
+            border-style: inset;
+        }
+        
+        button.play-button.playing {
+            background: linear-gradient(to bottom, #00b33c, #008a2e);
+            color: white;
+            border-color: #00d447;
+            text-shadow: 0 0 5px white;
+        }
+
+        button.primary-action {
+            background: linear-gradient(to bottom, var(--accent-color), #a03400);
+            color: white;
+            border-color: var(--accent-hover);
+        }
+
+        button.primary-action:hover {
+             background: linear-gradient(to bottom, var(--accent-hover), #b1450f);
+        }
+        
+        .remove-sequencer-btn {
+            background: linear-gradient(to bottom, #900, var(--danger-color));
+            color: white;
+            border-color: #f33;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            font-size: 1.2em;
+            line-height: 28px;
+            text-align: center;
+        }
+        
+        .remove-sequencer-btn:hover {
+            background: linear-gradient(to bottom, #b00, #a00);
+        }
+
+
+        /* --- Sequencer Container --- */
+        .sequencer-container {
+            background: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+        }
+
+        .sequencer-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .sequencer-name {
+            font-family: var(--font-family-header);
+            font-size: 2.5em;
+            background: #111;
+            border: 1px solid #555;
+            color: var(--accent-color);
+            width: 100px;
+            text-align: center;
+        }
+
+        .sequencer-grid {
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .instrument-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+
+        /* --- Row Controls --- */
+        .row-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 150px;
+            min-width: 150px;
+            background-color: #222;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        
+        .row-controls-header {
+            display: flex;
+            gap: 5px;
+        }
+
+        .instrument-label {
+            flex-grow: 1;
+            background: #3a3a3a;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 4px;
+            padding: 8px 0;
+            cursor: pointer;
+            transition: background-color 0.1s;
+            border: none;
+            box-shadow: none;
+        }
+        
+        .instrument-label:hover {
+            background-color: #555;
+        }
+
+        .toggle-controls-btn {
+            width: 40px;
+            padding: 4px;
+            font-size: 1.2em;
+        }
+
+        .extra-controls {
+            display: grid;
+            grid-template-areas:
+                "vol-label vol-label"
+                "volume volume"
+                "pan-label pan-label"
+                "panning panning"
+                "vel-btn vel-btn"
+                "rnd-btn clear-btn";
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            padding-top: 5px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 5px;
+        }
+        
+        .extra-controls label {
+            font-size: 0.8em;
+            text-transform: uppercase;
+            color: #aaa;
+            justify-self: start;
+        }
+        .extra-controls .vol-label { grid-area: vol-label; }
+        .extra-controls .volume-slider { grid-area: volume; width: 100%; margin: 0; }
+        .extra-controls .pan-label { grid-area: pan-label; }
+        .extra-controls .panning-slider { grid-area: panning; width: 100%; margin: 0;}
+        .extra-controls .toggle-velocity-btn { grid-area: vel-btn; font-size: 0.8em; padding: 4px; }
+        .extra-controls .rnd-row-btn { grid-area: rnd-btn; font-size: 0.8em; padding: 4px;}
+        .extra-controls .clear-row-btn { grid-area: clear-btn; font-size: 0.8em; padding: 4px;}
+
+
+        .steps-container {
+            display: flex;
+            gap: 5px;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .step-checkbox {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 35px;
+            height: 35px;
+            background-color: var(--led-off);
+            border: 2px solid #222;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+
+        .step-checkbox:checked {
+            background-color: var(--led-on);
+            box-shadow: 0 0 10px var(--led-on);
+        }
+        
+        .step-checkbox.playing {
+            outline: 2px solid var(--led-playhead);
+            box-shadow: 0 0 10px var(--led-playhead);
+        }
+
+        .velocity-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 35px;
+            height: 8px;
+            background: #444;
+            outline: none;
+            border-radius: 4px;
+            writing-mode: bt-lr; /* IE */
+            -webkit-appearance: slider-vertical; /* WebKit */
+            transform: rotate(180deg);
+            height: 50px;
+            width: 10px;
+            cursor: pointer;
+        }
+
+        /* --- Sliders --- */
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 15px;
+            background: #333;
+            outline: none;
+            border: 1px solid #555;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--accent-color);
+            border: 2px solid var(--text-color);
+            cursor: pointer;
+            border-radius: 50%;
+            margin-top: -3px;
+        }
+
+        input[type=range]:hover::-webkit-slider-thumb {
+            background: var(--accent-hover);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="top-controls">
+        <h1>RockForge Drum Sequencer</h1>
+
+        <div class="control-group">
+            <label>Master Volume</label>
+            <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.8">
+        </div>
+        
+        <div class="control-group">
+            <label for="tempo-input">Tempo (BPM)</label>
+            <input type="number" id="tempo-input" value="120" min="20" max="300">
+            <button id="tap-tempo-btn">TAP</button>
+        </div>
+
+        <div class="control-group">
+            <label for="humanize-slider">Humanize</label>
+            <input type="range" id="humanize-slider" min="0" max="1" step="0.01" value="0">
+            <button id="humanize-btn">Humanize OFF</button>
+        </div>
+        
+        <div class="control-group">
+            <label>MIDI</label>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                 <select id="midi-in-select"><option>No MIDI Input</option></select>
+                 <select id="midi-out-select"><option>No MIDI Output</option></select>
+                 <button id="scan-midi-btn">Scan for MIDI</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+             <label for="sequencer-amount-input">Add Sequencers</label>
+             <div style="display:flex; gap: 5px;">
+                <input type="number" id="sequencer-amount-input" value="1" min="1" max="10">
+                <button id="insert-sequencers-btn" class="primary-action">Insert</button>
+             </div>
+        </div>
+
+        <div class="control-group">
+            <label for="song-structure-input">Song Structure</label>
+            <input type="text" id="song-structure-input" placeholder="e.g. ABABCA">
+            <div style="display:flex; gap: 5px;">
+                <button id="song-play-btn" class="play-button">Song Play</button>
+                <button id="export-midi-btn">Export Song MIDI</button>
+            </div>
+        </div>
+        
+        <!-- NEW: Example Song Loader -->
+        <div class="control-group">
+            <label for="example-song-select">Load Example Song</label>
+            <select id="example-song-select">
+                <option value="">-- Select Song --</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="sequencers-container">
+        <!-- Sequencers will be inserted here by JavaScript -->
+    </div>
+    
+    <!-- MIDI Writer Library (embedded) -->
+    <script>
+        /*
+        * A JavaScript class for generating MIDI files.
+        * https://github.com/grimmdude/MidiWriterJS
+        * version 2.1.4
+        */
+       !function(t,i){"object"==typeof exports&&"undefined"!=typeof module?i(exports):"function"==typeof define&&define.amd?define(["exports"],i):i((t="undefined"!=typeof globalThis?globalThis:t||self).MidiWriter={})}(this,function(t){"use strict";var i={C:0,D:2,E:4,F:5,G:7,A:9,B:11},e={1:"note",2:"note",3:"note",4:"note",5:"note",6:"note",7:"note",8:"note",9:"note",10:"note",11:"note",12:"note",13:"note",14:"note",15:"note",16:"note"},n={note:128},r={controller:176,program:192},a={0:"acoustic grand piano",1:"bright acoustic piano",2:"electric grand piano",3:"honky-tonk piano",4:"electric piano 1",5:"electric piano 2",6:"harpsichord",7:"clavi",8:"celesta",9:"glockenspiel",10:"music box",11:"vibraphone",12:"marimba",13:"xylophone",14:"tubular bells",15:"dulcimer",16:"drawbar organ",17:"percussive organ",18:"rock organ",19:"church organ",20:"reed organ",21:"accordion",22:"harmonica",23:"tango accordion",24:"acoustic guitar (nylon)",25:"acoustic guitar (steel)",26:"electric guitar (jazz)",27:"electric guitar (clean)",28:"electric guitar (muted)",29:"overdriven guitar",30:"distortion guitar",31:"guitar harmonics",32:"acoustic bass",33:"electric bass (finger)",34:"electric bass (pick)",35:"fretless bass",36:"slap bass 1",37:"slap bass 2",38:"synth bass 1",39:"synth bass 2",40:"violin",41:"viola",42:"cello",43:"contrabass",44:"tremolo strings",45:"pizzicato strings",46:"orchestral harp",47:"timpani",48:"string ensemble 1",49:"string ensemble 2",50:"synth strings 1",51:"synth strings 2",52:"choir aahs",53:"voice oohs",54:"synth voice",55:"orchestra hit",56:"trumpet",57:"trombone",58:"tuba",59:"muted trumpet",60:"french horn",61:"brass section",62:"synth brass 1",63:"synth brass 2",64:"soprano sax",65:"alto sax",66:"tenor sax",67:"baritone sax",68:"oboe",69:"english horn",70:"bassoon",71:"clarinet",72:"piccolo",73:"flute",74:"recorder",75:"pan flute",76:"blown bottle",77:"shakuhachi",78:"whistle",79:"ocarina",80:"lead 1 (square)",81:"lead 2 (sawtooth)",82:"lead 3 (calliope)",83:"lead 4 (chiff)",84:"lead 5 (charang)",85:"lead 6 (voice)",86:"lead 7 (fifths)",87:"lead 8 (bass + lead)",88:"pad 1 (new age)",89:"pad 2 (warm)",90:"pad 3 (polysynth)",91:"pad 4 (choir)",92:"pad 5 (bowed)",93:"pad 6 (metallic)",94:"pad 7 (halo)",95:"pad 8 (sweep)",96:"fx 1 (rain)",97:"fx 2 (soundtrack)",98:"fx 3 (crystal)",99:"fx 4 (atmosphere)",100:"fx 5 (brightness)",101:"fx 6 (goblins)",102:"fx 7 (echoes)",103:"fx 8 (sci-fi)",104:"sitar",105:"banjo",106:"shamisen",107:"koto",108:"kalimba",109:"bag pipe",110:"fiddle",111:"shanai",112:"tinkle bell",113:"agogo",114:"steel drums",115:"woodblock",116:"taiko drum",117:"melodic tom",118:"synth drum",119:"reverse cymbal",120:"guitar fret noise",121:"breath noise",122:"seashore",123:"bird tweet",124:"telephone ring",125:"helicopter",126:"applause",127:"gunshot"},o=function(){function t(t){void 0===t&&(t={}),this.start=t.start||0,this.duration=t.duration||null,this.sequential=void 0===t.sequential||t.sequential,this.velocity=t.velocity||50,this.channel=t.channel||1,this.repeat=t.repeat||1,this.tick=t.tick||null,this.data=t.data||[],this.type=null,this.event="note",this.events=[],this.velocity=Math.ceil(t.velocity)||50,this.state=0,this.tickDuration=0,this.restDuration=0}return t.prototype.getTickDuration=function(){return this.tickDuration},t.prototype.setTickDuration=function(t){return this.tickDuration=t,this},t.prototype.getRestDuration=function(){return this.restDuration},t.prototype.setRestDuration=function(t){return this.restDuration=t,this},t.prototype.addEvent=function(t,i){return void 0===i&&(i={}),this.events.push([t,i]),this},t.prototype.getEvents=function(){return this.events},t.prototype.createTick=function(t,i){return null},t}();var s=function(t){function i(i){void 0===i&&(i={}),t.call(this,i),this.pitch=i.pitch||null,this.octave=i.octave||4,this.type="Note",this.event="note",this.noteNumber=null,this.sequential=void 0===i.sequential||i.sequential,this.setPitch(this.pitch)}return t&&(i.__proto__=t),i.prototype=Object.create(t&&t.prototype),i.prototype.constructor=i,i.prototype.setPitch=function(t){if(t){var e,n=t.match(/([A-G]){1}(b|#|s|x)?/);if(!n)throw new Error(t+" is not a valid pitch.");e=i.getPitch(n[0]),this.noteNumber=e+12*this.octave}},i.prototype.setOctave=function(t){return this.octave=t,this.setPitch(this.pitch),this},i.getPitch=function(t){var e=t.slice(0,1),n=t.slice(1,t.length);return i.noteToMidi(e,n)},i.noteToMidi=function(t,e){var n;n=i[t.toUpperCase()];var r;return r="b"===e?-1:"#"===e||"s"===e?1:"x"===e?2:0,n+=r},i}(o);var c=function(t){function i(i){void 0===i&&(i={}),t.call(this,i),this.type="Controller",this.controllerNumber=i.controllerNumber||null,this.controllerValue=i.controllerValue||null}return t&&(i.__proto__=t),i.prototype=Object.create(t&&t.prototype),i.prototype.constructor=i,i}(o);var h=function(t){function i(i){void 0===i&&(i={}),t.call(this,i),this.instrument=i.instrument||null,this.type="Program",this.event="program"}return t&&(i.__proto__=t),i.prototype=Object.create(t&&t.prototype),i.prototype.constructor=i,i.prototype.setInstrument=function(t){this.instrument=t},i}(o);function d(t,i){return t<<i}var u="MThd",l="MTrk",f=[0,128,256,384,512,640,768,896,1024,1152,1280,1408,1536,1664,1792,1920,2048,2176,2304,2432,2560,2688,2816,2944,3072,3200,3328,3456,3584,3712,3840,3968,4096,4224,4352,4480,4608,4736,4864,4992,5120,5248,5376,5504,5632,5760,5888,6016,6144,6272,6400,6528,6656,6784,6912,7040,7168,7296,7424,7552,7680,7808,7936,8064,8191],p={1:"d",2:"d",4:"q",8:"e",16:"s",32:"t"},v={1:"w",2:"h",4:"q",8:"e",16:"s",32:"t"},m={w:1,h:2,q:4,e:8,s:16,t:32};function g(t){var e=[];if("string"!=typeof t)throw new Error("Invalid duration specified.");var n,r,a,o=0;return n=t.match(/\d+\.*/g).map(function(t){return t.replace(/\.+/g,function(t){return Array.apply(null,Array(t.length)).map(function(){return"."}).join(" ")})}).join(" ").split(" "),n.forEach(function(t){if(r=t.match(/^(w|h|q|e|s|t){1}(\.*)/),r){a=r[2];var n=m[r[1]];e.push(b(n,a)),o+=1/n*y(a)}}),{ticks:e.reduce(function(t,i){return t+i}),decimal:o}}function b(t,i){var e;return e=f[t-1],e*=y(i),e}function y(t){return 2-1/Math.pow(2,t.length)}var w=function(){function t(t){var a,o;this.data=[],this.events=[],this.trackName=null,this.instrument=null,void 0===t&&(t=[]),this.config=t,this.config.channel=this.config.channel||1,this.channel=this.config.channel||1,a=r.program-1+this.channel,o=new h({channel:this.channel,instrument:68}),this.addEvent(o,{}),this.addEvent(new c({channel:this.channel,controllerNumber:7,controllerValue:100}),{}),this.addEvent(new c({channel:this.channel,controllerNumber:10,controllerValue:64}),{}),this.addEvent(new c({channel:this.channel,controllerNumber:11,controllerValue:127}),{}),this.program=new h({channel:this.channel}),this.setInstrument(0),this.setTempo(120),this.note=new s({channel:this.channel,octave:4})}return t.prototype.setTempo=function(t){this.tempo=t},t.prototype.addNote=function(t,e){this.addEvent(t,e)},t.prototype.addEvent=function(t,n){void 0===n&&(n={});var r,a,o,c,d,m,g;if(t.channel=t.channel||this.channel,"Note"===t.type){if(t.sequential){for(a=t.pitch?this.getTickDuration(t.duration):0,r=0;r<t.repeat;r++){for(c=0,d=t.pitch.length;c<d;c++){"string"==typeof t.pitch[c]?(g=new s({pitch:t.pitch[c],duration:t.duration,octave:t.octave,channel:t.channel}),o=this.getTickDuration(t.duration),g.setTickDuration(o),this.events.push([g,n])):console.log(t.pitch[c]),m=this.getTickDuration(t.wait),t.setRestDuration(m)}}}else for(r=0;r<t.repeat;r++)t.setTickDuration(this.getTickDuration(t.duration)),this.events.push([t,n]);return t.velocity=t.velocity||this.velocity,this}if("Program"===t.type)this.instrument=t.instrument,e[this.channel]&&t.channel?"note"===e[t.channel]&&(t.event="program"):"percussion"===e[this.channel]&&(t.event="program"),this.events.push([t,n]);else if("Controller"===t.type)this.events.push([t,n]);else this.events.push([t,n])},t.prototype.getTickDuration=function(t){if(void 0===t)return 0;if("string"==typeof t)return g(t).ticks;if("object"==typeof t)return t.reduce(function(t,i){return t+g(i).ticks},0)},t.prototype.buildData=function(){var t,o,s,c,h,d,u,l,f,p,v,y,w,k,N,D,M,C,P,T,V,O,I;for(this.data=[],h=this.tempo/60*8191/128,s=0,c=this.events.length;s<c;s++)if(t=this.events[s],"Note"===t[0].type){for(I=t[0],v=0,p=I.pitch.length;v<p;v++){if(I.sequential)w=this.getTickDuration(t[1].wait);else w=0;D=i[I.pitch[v].charAt(0).toUpperCase()],M=I.pitch[v].charAt(1),D+=-1*(M?"b"===M:-1)+1*(M?("#"===M||"s"===M):1)+2*(M?"x"===M:2),D+=12*I.octave,this.data.push(this.getTickDuration(t[1].start),r.note-1+I.channel,n.note-1+I.channel,D,I.velocity),o=this.getTickDuration(I.duration),this.data.push(o,r.note-1+I.channel,(n.note-1)-16+I.channel,D,I.velocity),this.data.push(I.getRestDuration())}}else if("Program"===t[0].type)T=t[0],N=a[T.instrument]?a[T.instrument]:T.instrument,this.data.push(0,r.program-1+T.channel,N);else if("Controller"===t[0].type)C=t[0],P=C.controllerNumber,V=C.controllerValue,this.data.push(0,r.controller-1+C.channel,P,V);return this},t.prototype.build=function(){var t,i,e,n,a=[],o=0,s=0,c=0,h=this.events.length;for(this.data=[],i=0;i<h;i++){if(e=this.events[i][0],t=this.events[i][1],e.channel=e.channel||this.channel,e.sequential=void 0===e.sequential||e.sequential,e.type){if("Note"===e.type){if(e.pitch){if(e.sequential){var p=this.getTickDuration(e.duration);e.setTickDuration(p);var v=this.getTickDuration(t.wait||"0");e.setRestDuration(v)}else e.setTickDuration(this.getTickDuration(e.duration));e.velocity=e.velocity||50}if(e.rest)e.setTickDuration(this.getTickDuration(e.duration));else if(!e.pitch&&!e.rest){var m=this.getTickDuration(e.duration);e.setTickDuration(m)}o=e.getTickDuration(),s=e.getRestDuration()}else o=0,s=0;if(c=this.getTickDuration(t.start),"Note"===e.type){if(e.pitch)for(n=0;n<e.pitch.length;n++)a.push(this.getNote(e,t,c,o,s,n));else e.rest&&a.push(this.getRest(e,t,c,o))}else"Controller"===e.type?a.push(this.getController(e,t,c)):"Program"===e.type&&a.push(this.getProgram(e,t,c))}return a.sort(function(t,i){return t.tick-i.tick}),this.data=this.createEvents(a),this},t.prototype.getRest=function(t,i,e){return{tick:e,type:"rest",channel:t.channel,duration:t.getTickDuration(),sequential:t.sequential}},t.prototype.getNote=function(t,e,n,r,a,o){var c=t.pitch[o],h=t.octave,d=this.getNoteNumber(c,h);return{tick:n,pitch:d,duration:r,channel:t.channel,velocity:t.velocity,sequential:t.sequential,rest:a,type:"note"}},t.prototype.getController=function(t,i,e){return{tick:e,type:"controller",channel:t.channel,controllerNumber:t.controllerNumber,controllerValue:t.controllerValue}},t.prototype.getProgram=function(t,i,e){return{tick:e,type:"program",channel:t.channel,instrument:t.instrument}},t.prototype.getNoteNumber=function(t,e){return i[t.charAt(0).toUpperCase()]+("b"==t.charAt(1)?-1:("#"==t.charAt(1)?1:0))+12*e},t.prototype.createEvents=function(t){for(var i,e,n,a,o,s,c=0,h=0,d=[],u=0;u<t.length;u++){if(i=t[u],(e=i.tick-c)>0&&(h=this.getVariableLength(e),d=d.concat(h)),"note"===i.type){n=[143+i.channel,i.pitch,i.velocity],d=d.concat(n),c=i.tick,i.sequential?(e=i.duration,(h=this.getVariableLength(e)).length&&d.push(h[0]),a=[127+i.channel,i.pitch,i.velocity],d=d.concat(a),c=c+i.duration,e=i.rest,(h=this.getVariableLength(e)).length&&d.push(h[0])):(o=t.filter(function(t){return"note"===t.type&&t.pitch===i.pitch&&t.channel===i.channel&&t.tick>i.tick}).sort(function(t,i){return t.tick-i.tick}),(s=o[0])?e=s.tick-i.tick:e=f[0],h=this.getVariableLength(e),d=d.concat(h),a=[127+i.channel,i.pitch,i.velocity],d=d.concat(a),c=i.tick)}else"program"===i.type?(n=[191+i.channel,i.instrument],d=d.concat(n),c=i.tick):"controller"===i.type&&(n=[175+i.channel,i.controllerNumber,i.controllerValue],d=d.concat(n),c=i.tick);"rest"===i.type&&(c+=i.duration)}return d},t.prototype.getVariableLength=function(t){for(var i=t&127;t>>=7;){i<<=8,i|=128|(t&127)}for(var e=[];;){if(e.push(127&i),128&i)i>>=8;else{e[0]|=128;break}}for(;e.length>1&&!e[e.length-1];)e.pop();for(var n=e.reverse(),r=0;r<n.length-1;r++)n[r]|=128;return n},t.prototype.setInstrument=function(t){return this.instrument=t,this.program.setInstrument(t),this.addEvent(this.program,{}),this},t.prototype.setVolume=function(t){this.volume=t},t.prototype.p=function(t,i){var e=new s({pitch:[t],duration:i.duration,octave:i.octave||4});return this.addNote(e,i),this},t.prototype.noteOn=function(t,i){return e.note(this,t,i,0)},t.prototype.noteOff=function(t,i){return e.note(this,t,i,1)},t.prototype.pad=function(t,i,e){for(var n=t;n.length<i;)n="0"+n;return n},t.prototype.getPitch=function(t){return s.getPitch(t)},t.prototype.getNoteDuration=function(t){return this.duration(t)},t.prototype.getEvents=function(){return this.events},t}(),k={};k.Note=s,k.Track=w,k.Writer=function(t){var i,e,n,a,o,s,c,h,f=7,p=4,v=t.length,m=(i=u,e=p,n=f,o=v,s=128,c=h=0,i.split("").map(function(t){return t.charCodeAt(0)}).concat([c,c,c,e,c,n,c,o,c,s]));return t.map(function(t){var i,e,n,a,o,s,c,h,f;return i=l,e=f=(n=(a=(o=t.data).length)+4,""+String.fromCharCode(n>>24&255)+String.fromCharCode(n>>16&255)+String.fromCharCode(n>>8&255)+String.fromCharCode(n&255)),s=h=(c=o.join(",")).split(",").map(Number),i.split("").map(function(t){return t.charCodeAt(0)}).concat([e.charCodeAt(0),e.charCodeAt(1),e.charCodeAt(2),e.charCodeAt(3)]).concat(s)}).forEach(function(t){m=m.concat(t)}),d(m)},k.dataUri=function(t){return"data:audio/midi;base64,"+btoa(t)},k.VexFlow=function(){return console.log("VexFlow is not bundled with this version of MidiWriter.js.")},t.Constants=void 0,t.Controller=c,t.Note=s,t.Program=h,t.Track=w,t.Writer=function(t){var i,e,n,r,a,o,s,c,h=7,f=4,p=t.length,v=(i=u,e=f,n=h,r=p,a=128,o=s=c=0,i.split("").map(function(t){return t.charCodeAt(0)}).concat([o,o,o,e,o,n,o,r,o,a]));return t.forEach(function(t){var i=t.build(),e=l.split("").map(function(t){return t.charCodeAt(0)}),n=d(i.length,0);e=e.concat(n),v=v.concat(e.concat(i))}),v},t.b64=function(t){return btoa(String.fromCharCode.apply(null,new Uint8Array(t)))}},Object.defineProperty(t,"__esModule",{value:!0})});
+    </script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Core Audio & State Variables ---
+        let audioContext;
+        const audioBuffers = {};
+        let isPlaying = false;
+        let isSongPlaying = false;
+        let currentStep = 0;
+        let bpm = 120;
+        let humanizeAmount = 0;
+        let isHumanizeOn = false;
+        let sequencersData = {};
+
+        // --- Playback Scheduling ---
+        let schedulerTimerID;
+        let nextNoteTime = 0.0;
+        const scheduleAheadTime = 0.1; // seconds
+
+        // --- Song Mode State ---
+        let songStructure = [];
+        let currentSongSectionIndex = 0;
+        let currentSongSequencerId = '';
+        
+        // --- MIDI & Example Song Data ---
+        let midiAccess = null;
+        let currentMidiInput = null;
+        let currentMidiOutput = null;
+        let exampleSongsData = {};
+
+        const INSTRUMENTS = [
+            'crash1', 'crash2', 'ride', 'china',
+            'tom1', 'tom2', 'tom3', 'floor-tom',
+            'hi-hat-open', 'hi-hat-closed', 'snare', 'kick'
+        ];
+        
+        const INSTRUMENT_MIDI_NOTES = {
+            'kick': 36, 'snare': 38, 'hi-hat-closed': 42, 'hi-hat-open': 46, 'floor-tom': 41, 
+            'tom3': 43, 'tom2': 45, 'tom1': 47, 'crash1': 49, 'crash2': 57, 'ride': 51, 'china': 52
+        };
+
+        const midiNoteToInstrumentMap = {
+            36: 'kick', 35: 'kick', 38: 'snare', 40: 'snare', 42: 'hi-hat-closed', 44: 'hi-hat-closed',
+            46: 'hi-hat-open', 41: 'floor-tom', 43: 'floor-tom', 45: 'tom2', 47: 'tom2', 48: 'tom1',
+            50: 'tom1', 49: 'crash1', 57: 'crash2', 51: 'ride', 52: 'china', 55: 'crash1', 59: 'ride',
+        };
+
+        const sequencersContainer = document.getElementById('sequencers-container');
+        const tempoInput = document.getElementById('tempo-input');
+        const tapTempoBtn = document.getElementById('tap-tempo-btn');
+        const masterVolume = document.getElementById('master-volume');
+        const humanizeBtn = document.getElementById('humanize-btn');
+        const humanizeSlider = document.getElementById('humanize-slider');
+        const insertSequencersBtn = document.getElementById('insert-sequencers-btn');
+        const sequencerAmountInput = document.getElementById('sequencer-amount-input');
+        const songPlayBtn = document.getElementById('song-play-btn');
+        const songStructureInput = document.getElementById('song-structure-input');
+        const exportMidiBtn = document.getElementById('export-midi-btn');
+        const scanMidiBtn = document.getElementById('scan-midi-btn');
+        const midiInSelect = document.getElementById('midi-in-select');
+        const midiOutSelect = document.getElementById('midi-out-select');
+        const exampleSongSelect = document.getElementById('example-song-select');
+        
+        async function initAudio() {
+            if (audioContext) return;
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                await loadAllSamples();
+            } catch (e) {
+                alert('Web Audio API is not supported or could not be initialized.');
+                console.error(e);
+            }
+        }
+        async function loadSample(instrument) {
+            try {
+                const response = await fetch(`${instrument}.wav`);
+                if (!response.ok) throw new Error(`Could not load ${instrument}.wav.`);
+                const arrayBuffer = await response.arrayBuffer();
+                audioBuffers[instrument] = await audioContext.decodeAudioData(arrayBuffer);
+            } catch (error) {
+                console.error(error);
+                alert(`Failed to load sample: ${instrument}.wav. Ensure file exists.`);
+            }
+        }
+        async function loadAllSamples() {
+            await Promise.all(INSTRUMENTS.map(loadSample));
+            console.log('All samples loaded.');
+        }
+
+        function createSequencer(id, name) {
+            const sequencerDiv = document.createElement('div');
+            sequencerDiv.className = 'sequencer-container';
+            sequencerDiv.id = `sequencer-${id}`;
+
+            sequencersData[id] = { name: name, steps: 16, grid: {}, volumes: {}, velocities: {}, panning: {} };
+
+            const header = document.createElement('div');
+            header.className = 'sequencer-header';
+            header.innerHTML = `
+                <button class="remove-sequencer-btn" data-sequencer-id="${id}">X</button>
+                <button class="hide-show-btn" data-sequencer-id="${id}">Hide</button>
+                <input type="text" class="sequencer-name" value="${name}" data-sequencer-id="${id}" data-old-name="${name}">
+                <div class="control-group">
+                    <label>Steps</label>
+                    <input type="number" class="steps-input" value="16" min="4" max="64" data-sequencer-id="${id}">
+                </div>
+                <button class="rnd-all-btn primary-action" data-sequencer-id="${id}">RND All</button>
+                <button class="play-button" data-sequencer-id="${id}">Play</button>
+            `;
+            
+            const gridDiv = document.createElement('div');
+            gridDiv.className = 'sequencer-grid';
+            
+            sequencerDiv.append(header, gridDiv);
+            sequencersContainer.appendChild(sequencerDiv);
+
+            updateSequencerGrid(id, 16);
+            addSequencerHeaderEventListeners(id);
+        }
+
+        function addSequencerHeaderEventListeners(id) {
+            const header = document.querySelector(`#sequencer-${id} .sequencer-header`);
+            header.querySelector('.remove-sequencer-btn').onclick = handleRemoveSequencer;
+            header.querySelector('.hide-show-btn').onclick = (e) => {
+                const grid = document.querySelector(`#sequencer-${id} .sequencer-grid`);
+                grid.classList.toggle('hidden');
+                e.target.textContent = grid.classList.contains('hidden') ? 'Show' : 'Hide';
+            };
+            header.querySelector('.sequencer-name').onchange = handleNameChange;
+            header.querySelector('.steps-input').onchange = (e) => {
+                const newSteps = parseInt(e.target.value, 10);
+                if (newSteps >= 4 && newSteps <= 64) {
+                    sequencersData[id].steps = newSteps;
+                    updateSequencerGrid(id, newSteps);
+                }
+            };
+            header.querySelector('.rnd-all-btn').onclick = () => randomizeSequencer(id);
+            header.querySelector('.play-button').onclick = () => togglePlay(id);
+        }
+        
+        function handleRemoveSequencer(e) {
+            const sequencerId = e.target.dataset.sequencerId;
+            if (confirm(`Are you sure you want to remove sequencer "${sequencersData[sequencerId].name}"?`)) {
+                if (document.querySelector(`.play-button[data-sequencer-id="${sequencerId}"]`)?.classList.contains('playing')) {
+                    stop();
+                }
+                delete sequencersData[sequencerId];
+                document.getElementById(`sequencer-${sequencerId}`)?.remove();
+                console.log(`Removed sequencer ${sequencerId}`);
+            }
+        }
+        
+        function updateSequencerGrid(sequencerId, numSteps) {
+            const gridDiv = document.querySelector(`#sequencer-${sequencerId} .sequencer-grid`);
+            gridDiv.innerHTML = '';
+            
+            const data = sequencersData[sequencerId];
+
+            INSTRUMENTS.forEach(instrument => {
+                if (!data.grid[instrument]) data.grid[instrument] = Array(64).fill(false);
+                if (!data.velocities[instrument]) data.velocities[instrument] = Array(64).fill(100);
+                if (data.volumes[instrument] === undefined) data.volumes[instrument] = 0.8;
+                if (data.panning[instrument] === undefined) data.panning[instrument] = 0;
+
+                const row = document.createElement('div');
+                row.className = 'instrument-row';
+
+                const rowControls = document.createElement('div');
+                rowControls.className = 'row-controls';
+                rowControls.innerHTML = `
+                    <div class="row-controls-header">
+                        <button class="instrument-label" data-instrument="${instrument}" data-sequencer-id="${sequencerId}">${instrument.replace(/-/g, ' ')}</button>
+                        <button class="toggle-controls-btn">+/-</button>
+                    </div>
+                    <div class="extra-controls hidden">
+                        <label class="vol-label">Volume</label>
+                        <input type="range" class="volume-slider" data-instrument="${instrument}" data-sequencer-id="${sequencerId}" min="0" max="1" step="0.01" value="${data.volumes[instrument]}">
+                        <label class="pan-label">Pan</label>
+                        <input type="range" class="panning-slider" data-instrument="${instrument}" data-sequencer-id="${sequencerId}" min="-1" max="1" step="0.01" value="${data.panning[instrument]}">
+                        <button class="toggle-velocity-btn" data-instrument="${instrument}" data-sequencer-id="${sequencerId}">Velocity</button>
+                        <button class="rnd-row-btn" data-instrument="${instrument}" data-sequencer-id="${sequencerId}">RND</button>
+                        <button class="clear-row-btn" data-instrument="${instrument}" data-sequencer-id="${sequencerId}">Clear</button>
+                    </div>
+                `;
+
+                const stepsContainer = document.createElement('div');
+                stepsContainer.className = 'steps-container';
+                for (let i = 0; i < numSteps; i++) {
+                    stepsContainer.innerHTML += `
+                        <div class="step">
+                            <input type="checkbox" class="step-checkbox" data-step="${i}" data-instrument="${instrument}" data-sequencer-id="${sequencerId}" ${data.grid[instrument][i] ? 'checked' : ''}>
+                            <input type="range" class="velocity-slider hidden" min="1" max="127" value="${data.velocities[instrument][i]}" data-step="${i}" data-instrument="${instrument}" data-sequencer-id="${sequencerId}">
+                        </div>
+                    `;
+                }
+                
+                row.append(rowControls, stepsContainer);
+                gridDiv.appendChild(row);
+            });
+            addGridEventListeners(sequencerId);
+        }
+        
+        function addGridEventListeners(sequencerId) {
+            const container = document.getElementById(`sequencer-${sequencerId}`);
+            container.querySelectorAll('.step-checkbox').forEach(cb => cb.onchange = handleStepChange);
+            container.querySelectorAll('.velocity-slider').forEach(vs => vs.oninput = handleVelocityChange);
+            container.querySelectorAll('.volume-slider').forEach(vs => vs.oninput = handleVolumeChange);
+            container.querySelectorAll('.panning-slider').forEach(ps => ps.oninput = handlePanningChange);
+            container.querySelectorAll('.instrument-label').forEach(label => label.onclick = handleLabelClick);
+            container.querySelectorAll('.toggle-velocity-btn').forEach(btn => btn.onclick = handleVelocityToggle);
+            container.querySelectorAll('.toggle-controls-btn').forEach(btn => btn.onclick = (e) => {
+                e.target.closest('.row-controls').querySelector('.extra-controls').classList.toggle('hidden');
+            });
+            container.querySelectorAll('.rnd-row-btn').forEach(btn => btn.onclick = handleRandomizeRow);
+            container.querySelectorAll('.clear-row-btn').forEach(btn => btn.onclick = handleClearRow);
+        }
+
+        function handleInsertSequencers() {
+            const amount = parseInt(sequencerAmountInput.value, 10);
+            let nextCharIndex = 0;
+            const existingNames = new Set(Object.values(sequencersData).map(s => s.name));
+            
+            for(let i = 0; i < amount; i++) {
+                let newName;
+                do {
+                    newName = String.fromCharCode(65 + nextCharIndex++);
+                } while(existingNames.has(newName));
+                
+                existingNames.add(newName);
+                createSequencer(newName, newName);
+            }
+        }
+        function handleNameChange(e) {
+            const newName = e.target.value.toUpperCase();
+            const oldName = e.target.dataset.oldName;
+            const isTaken = Object.values(sequencersData).some(data => data.name === newName && data.name !== oldName);
+            if (isTaken || !newName) {
+                alert(`Name "${newName}" is invalid or already in use. Reverting.`);
+                e.target.value = oldName;
+                return;
+            }
+            sequencersData[e.target.dataset.sequencerId].name = newName;
+            e.target.dataset.oldName = newName;
+        }
+
+        function handleStepChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].grid[instrument][step] = e.target.checked; }
+        function handleVelocityChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].velocities[instrument][step] = parseInt(e.target.value, 10); }
+        function handleVolumeChange(e) { const { instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].volumes[instrument] = parseFloat(e.target.value); }
+        function handlePanningChange(e) { const { instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].panning[instrument] = parseFloat(e.target.value); }
+        function handleLabelClick(e) {
+            const { instrument, sequencerId } = e.target.dataset;
+            const data = sequencersData[sequencerId];
+            playSample(instrument, data.volumes[instrument], data.panning[instrument]);
+            
+            if ((isPlaying || isSongPlaying) && (!isSongPlaying || (isSongPlaying && currentSongSequencerId === sequencerId))) {
+                const stepCheckbox = document.querySelector(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-instrument="${instrument}"][data-step="${currentStep}"]`);
+                if (stepCheckbox) {
+                    stepCheckbox.checked = !stepCheckbox.checked;
+                    stepCheckbox.dispatchEvent(new Event('change'));
+                }
+            }
+        }
+        function handleVelocityToggle(e) {
+            const row = e.target.closest('.instrument-row');
+            row.querySelectorAll('.velocity-slider').forEach(slider => slider.classList.toggle('hidden'));
+        }
+        function handleRandomizeRow(e) {
+            const { instrument, sequencerId } = e.target.dataset;
+            const data = sequencersData[sequencerId];
+            for (let i = 0; i < data.steps; i++) {
+                data.grid[instrument][i] = Math.random() > 0.6;
+            }
+            updateSequencerGrid(sequencerId, data.steps);
+        }
+        function handleClearRow(e) {
+            const { instrument, sequencerId } = e.target.dataset;
+            sequencersData[sequencerId].grid[instrument].fill(false);
+            updateSequencerGrid(sequencerId, sequencersData[sequencerId].steps);
+        }
+        function randomizeSequencer(sequencerId) {
+             const data = sequencersData[sequencerId];
+             INSTRUMENTS.forEach(instrument => data.grid[instrument].forEach((_, i) => data.grid[instrument][i] = Math.random() > 0.7));
+             updateSequencerGrid(sequencerId, data.steps);
+        }
+        
+        function playSample(instrument, volume, panning = 0, velocity = 127, time) {
+            if (!audioContext || !audioBuffers[instrument]) return;
+
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffers[instrument];
+
+            const pannerNode = audioContext.createStereoPanner();
+            pannerNode.pan.setValueAtTime(panning, time || audioContext.currentTime);
+
+            const gainNode = audioContext.createGain();
+            let finalVolume = volume * (velocity / 127) * masterVolume.value;
+            if (isHumanizeOn) finalVolume = Math.max(0, finalVolume + ((Math.random() - 0.5) * 2 * 0.2 * humanizeAmount));
+            gainNode.gain.setValueAtTime(Math.min(1.0, finalVolume), time || audioContext.currentTime);
+
+            source.connect(pannerNode).connect(gainNode).connect(audioContext.destination);
+            
+            let startTime = time || audioContext.currentTime;
+            if (isHumanizeOn && time) startTime += (Math.random() - 0.5) * (60.0 / bpm / 4.0) * 0.5 * humanizeAmount;
+            source.start(startTime);
+        }
+
+        function scheduler() { while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) { scheduleNote(currentStep, nextNoteTime); nextNote(); } }
+        
+        function nextNote() {
+            const timePerStep = (60.0 / bpm) / 4;
+            nextNoteTime += timePerStep;
+
+            let activeId = isSongPlaying ? currentSongSequencerId : document.querySelector('.play-button.playing')?.dataset.sequencerId;
+            if (!activeId || !sequencersData[activeId]) {
+                stop();
+                return;
+            }
+
+            const numSteps = sequencersData[activeId].steps;
+            
+            // If the next step is the last step of the current section
+            if (currentStep >= numSteps - 1) {
+                if (isSongPlaying) {
+                    let nextSectionIndex = currentSongSectionIndex + 1;
+                    if (nextSectionIndex >= songStructure.length) {
+                        nextSectionIndex = 0; // Loop song
+                    }
+                    
+                    const nextSectionName = songStructure[nextSectionIndex];
+                    const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === nextSectionName);
+
+                    if (nextSequencer) {
+                        currentSongSectionIndex = nextSectionIndex;
+                        currentSongSequencerId = nextSequencer[0];
+                        currentStep = 0; // Reset step for the new section
+                    } else {
+                        console.error(`Song section "${nextSectionName}" not found. Stopping.`);
+                        stop();
+                    }
+                } else {
+                    currentStep = 0; // Loop current sequencer
+                }
+            } else {
+                currentStep++; // Advance step within the current section
+            }
+        }
+
+        function scheduleNote(step, time) {
+            let activeSequencerId = isSongPlaying ? currentSongSequencerId : document.querySelector('.play-button.playing')?.dataset.sequencerId;
+            if(!activeSequencerId || !sequencersData[activeSequencerId]) return;
+            const data = sequencersData[activeSequencerId];
+            INSTRUMENTS.forEach(instrument => {
+                if (data.grid[instrument][step]) {
+                    const velocity = data.velocities[instrument][step];
+                    playSample(instrument, data.volumes[instrument], data.panning[instrument], velocity, time);
+                    if (currentMidiOutput && INSTRUMENT_MIDI_NOTES[instrument]) {
+                        const note = INSTRUMENT_MIDI_NOTES[instrument];
+                        const channel = 9; // MIDI channel 10
+                        const noteOnMessage = [0x90 + channel, note, velocity];
+                        const noteOffMessage = [0x80 + channel, note, 0];
+                        const noteDuration = 200;
+                        const sendTime = window.performance.now() + (time - audioContext.currentTime) * 1000;
+                        currentMidiOutput.send(noteOnMessage, sendTime);
+                        currentMidiOutput.send(noteOffMessage, sendTime + noteDuration);
+                    }
+                }
+            });
+            setTimeout(() => updatePlayhead(step, activeSequencerId), (time - audioContext.currentTime) * 1000);
+        }
+
+        let lastPlayhead = { step: -1, id: null };
+        function updatePlayhead(step, sequencerId) {
+             if (lastPlayhead.id && document.getElementById(`sequencer-${lastPlayhead.id}`)) {
+                document.querySelectorAll(`.step-checkbox[data-sequencer-id="${lastPlayhead.id}"][data-step="${lastPlayhead.step}"]`).forEach(el => el.classList.remove('playing'));
+             }
+             if (document.getElementById(`sequencer-${sequencerId}`)) {
+                document.querySelectorAll(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-step="${step}"]`).forEach(el => el.classList.add('playing'));
+             }
+             lastPlayhead = { step, id: sequencerId };
+        }
+        
+        async function togglePlay(sequencerId, isSongMode = false) {
+             await initAudio();
+             isSongPlaying = isSongMode;
+             if ((isPlaying && !isSongMode) || (isSongPlaying && isSongMode)) {
+                 stop();
+                 return;
+             }
+             if (audioContext.state === 'suspended') await audioContext.resume();
+             
+             isPlaying = true;
+             document.querySelectorAll('.play-button').forEach(b => {
+                 b.classList.remove('playing');
+                 if(b.dataset.sequencerId) b.textContent = 'Play';
+             });
+             songPlayBtn.classList.remove('playing');
+             songPlayBtn.textContent = 'Song Play';
+
+             if (isSongMode) {
+                 songPlayBtn.classList.add('playing');
+                 songPlayBtn.textContent = 'Song Stop';
+             } else {
+                 const playBtn = document.querySelector(`.play-button[data-sequencer-id="${sequencerId}"]`);
+                 if (playBtn) { playBtn.classList.add('playing'); playBtn.textContent = 'Stop'; }
+             }
+             
+             currentStep = 0;
+             nextNoteTime = audioContext.currentTime;
+             schedulerTimerID = setInterval(scheduler, 25.0);
+        }
+
+        function stop() {
+            isPlaying = false; isSongPlaying = false;
+            clearInterval(schedulerTimerID);
+            document.querySelectorAll('.play-button').forEach(b => { 
+                b.classList.remove('playing');
+                if(b.id === 'song-play-btn') b.textContent = 'Song Play';
+                else if (b.dataset.sequencerId) b.textContent = 'Play';
+            });
+
+            if (lastPlayhead.id && document.getElementById(`sequencer-${lastPlayhead.id}`)) {
+                document.querySelectorAll(`.step-checkbox[data-sequencer-id="${lastPlayhead.id}"]`).forEach(el => el.classList.remove('playing'));
+            }
+            lastPlayhead = { step: -1, id: null };
+            currentStep = 0;
+        }
+
+        function playSong() {
+            if (isSongPlaying) {
+                stop();
+                return;
+            }
+            try {
+                const structureStr = songStructureInput.value.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+                if(!structureStr) { alert('Please enter a song structure (e.g., ABAB).'); return; }
+
+                const availableNames = Object.values(sequencersData).map(d => d.name);
+                songStructure = [...structureStr];
+                
+                const firstSectionName = songStructure[0];
+                if (!availableNames.includes(firstSectionName)) {
+                    throw new Error(`The first section of your song "${firstSectionName}" does not match any existing sequencer names.`);
+                }
+                
+                const firstSequencerEntry = Object.entries(sequencersData).find(([id, data]) => data.name === firstSectionName);
+
+                if (firstSequencerEntry) {
+                    currentSongSequencerId = firstSequencerEntry[0];
+                    currentSongSectionIndex = 0;
+                    togglePlay(null, true);
+                }
+            } catch(error) {
+                console.error("Error starting song playback:", error);
+                alert("Error starting song playback: " + error.message);
+                stop();
+            }
+        }
+
+        let lastTap = 0; let tapTimes = [];
+        function tapTempo() {
+            const now = Date.now();
+            if (now - lastTap > 2000) tapTimes = [];
+            lastTap = now; tapTimes.push(now);
+            if (tapTimes.length > 4) tapTimes.shift();
+            if (tapTimes.length > 1) {
+                const average = (tapTimes[tapTimes.length - 1] - tapTimes[0]) / (tapTimes.length - 1);
+                bpm = Math.max(20, Math.min(300, Math.round(60000 / average)));
+                tempoInput.value = bpm;
+            }
+        }
+        
+        function initMidi() {
+            if (navigator.requestMIDIAccess) navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
+            else alert("Web MIDI API is not supported in this browser.");
+        }
+        function onMIDISuccess(m) {
+            midiAccess = m;
+            midiInSelect.innerHTML = midiAccess.inputs.size > 0 ? '<option value="">Select MIDI Input...</option>' + [...midiAccess.inputs.values()].map(i => `<option value="${i.id}">${i.name}</option>`).join('') : '<option>No MIDI Input</option>';
+            midiOutSelect.innerHTML = midiAccess.outputs.size > 0 ? '<option value="">Select MIDI Output...</option>' + [...midiAccess.outputs.values()].map(o => `<option value="${o.id}">${o.name}</option>`).join('') : '<option>No MIDI Output</option>';
+        }
+        function onMIDIFailure(msg) { console.error(`Failed to get MIDI access - ${msg}`); alert(`Failed to get MIDI access.`); }
+        function selectMidiInput(e) {
+            if (currentMidiInput) currentMidiInput.onmidimessage = null;
+            currentMidiInput = e.target.value ? midiAccess.inputs.get(e.target.value) : null;
+            if (currentMidiInput) currentMidiInput.onmidimessage = handleMidiMessage;
+        }
+        async function handleMidiMessage(message) {
+            await initAudio();
+            const [command, note, velocity] = message.data;
+            if (command === 144 && velocity > 0) {
+                const instrument = midiNoteToInstrumentMap[note];
+                if (instrument) {
+                    const firstSequencerId = Object.keys(sequencersData)[0];
+                    const volume = firstSequencerId ? sequencersData[firstSequencerId].volumes[instrument] : 0.8;
+                    playSample(instrument, volume, 0, velocity);
+                }
+            }
+        }
+
+        function exportSongToMidi() {
+            try {
+                const structureStr = songStructureInput.value.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+                if (!structureStr) { alert('Please enter a song structure to export.'); return; }
+                
+                const songSections = [...structureStr];
+                
+                // FIXED: Explicitly use window.MidiWriter
+                const track = new window.MidiWriter.Track();
+                track.setTempo(bpm);
+                track.addEvent(new window.MidiWriter.ProgramChangeEvent({instrument: 1, channel: 10}));
+
+                let totalTicks = 0;
+                const ticksPerStep = 128;
+
+                songSections.forEach(sectionName => {
+                    const sequencerId = Object.keys(sequencersData).find(key => sequencersData[key].name === sectionName);
+                    if (!sequencerId) {
+                        console.warn(`Skipping unknown section "${sectionName}" in MIDI export.`);
+                        return;
+                    }
+                    
+                    const sequencerData = sequencersData[sequencerId];
+                    for (let step = 0; step < sequencerData.steps; step++) {
+                        const notesForThisStep = [];
+                        INSTRUMENTS.forEach(instrument => {
+                            if (sequencerData.grid[instrument][step] && INSTRUMENT_MIDI_NOTES[instrument]) {
+                                notesForThisStep.push(new window.MidiWriter.NoteEvent({ 
+                                    pitch: [INSTRUMENT_MIDI_NOTES[instrument]], 
+                                    duration: '16', 
+                                    velocity: Math.round(sequencerData.velocities[instrument][step] / 127 * 100), 
+                                    startTick: totalTicks + (step * ticksPerStep), 
+                                    channel: 10 
+                                }));
+                            }
+                        });
+                        if (notesForThisStep.length > 0) {
+                            track.addEvent(notesForThisStep, () => ({ sequential: false }));
+                        }
+                    }
+                    totalTicks += sequencerData.steps * ticksPerStep;
+                });
+
+                const writer = new window.MidiWriter.Writer([track]);
+                const link = document.createElement('a');
+                link.href = writer.dataUri();
+                link.download = "rockforge_song.mid";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+            } catch(error) {
+                console.error("Error exporting MIDI:", error);
+                alert("An error occurred during MIDI export: " + error.message);
+            }
+        }
+        
+        // --- NEW: Example Song Loading Functions ---
+        async function loadExampleSongs() {
+            try {
+                const response = await fetch('songs.json');
+                if (!response.ok) throw new Error(`Could not load songs.json. Status: ${response.status}`);
+                exampleSongsData = await response.json();
+                
+                // Populate the dropdown
+                for (const songName in exampleSongsData) {
+                    const option = document.createElement('option');
+                    option.value = songName;
+                    option.textContent = songName;
+                    exampleSongSelect.appendChild(option);
+                }
+            } catch (error) {
+                console.error("Failed to load example songs:", error);
+                alert("Could not load example songs. Make sure 'songs.json' is in the same folder as the HTML file.");
+            }
+        }
+        
+        function clearAllSequencers() {
+            stop();
+            sequencersContainer.innerHTML = '';
+            sequencersData = {};
+        }
+
+        function handleLoadExampleSong(e) {
+            const songName = e.target.value;
+            if (!songName) return;
+
+            clearAllSequencers();
+            
+            const songData = exampleSongsData[songName];
+
+            // Create sequencers for each pattern defined in the song
+            for (const patternName in songData.patterns) {
+                createSequencer(patternName, patternName);
+                const pattern = songData.patterns[patternName];
+                const data = sequencersData[patternName];
+
+                // Apply the grid data from the pattern
+                for (const instrument in pattern) {
+                    if (INSTRUMENTS.includes(instrument)) {
+                        for (let i = 0; i < data.steps && i < pattern[instrument].length; i++) {
+                            data.grid[instrument][i] = pattern[instrument][i] === 1;
+                        }
+                    }
+                }
+                updateSequencerGrid(patternName, data.steps);
+            }
+            
+            // Set tempo and song structure
+            tempoInput.value = songData.bpm;
+            bpm = songData.bpm;
+            songStructureInput.value = songData.structure;
+
+            e.target.value = ""; // Reset dropdown
+        }
+
+
+        // --- Initial Setup & Event Listeners ---
+        tempoInput.addEventListener('change', (e) => bpm = parseInt(e.target.value, 10));
+        tapTempoBtn.addEventListener('click', tapTempo);
+        humanizeBtn.addEventListener('click', () => { isHumanizeOn = !isHumanizeOn; humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF"; humanizeBtn.classList.toggle('playing', isHumanizeOn); });
+        humanizeSlider.addEventListener('input', (e) => humanizeAmount = parseFloat(e.target.value));
+        insertSequencersBtn.addEventListener('click', handleInsertSequencers);
+        songPlayBtn.addEventListener('click', playSong);
+        exportMidiBtn.addEventListener('click', exportSongToMidi);
+        scanMidiBtn.addEventListener('click', initMidi);
+        midiInSelect.onchange = selectMidiInput;
+        midiOutSelect.onchange = (e) => {
+            const deviceId = e.target.value;
+            currentMidiOutput = deviceId ? midiAccess.outputs.get(deviceId) : null;
+            console.log(currentMidiOutput ? `MIDI Output selected: ${currentMidiOutput.name}` : 'MIDI Output deselected.');
+        };
+        exampleSongSelect.addEventListener('change', handleLoadExampleSong);
+
+
+        // --- Initial Calls ---
+        createSequencer('A', 'A');
+        loadExampleSongs();
+    });
+    </script>
+
+</body>
+</html>
