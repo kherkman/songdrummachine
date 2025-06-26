@@ -50,7 +50,7 @@
             flex-wrap: wrap;
             align-items: center;
             gap: 20px;
-            justify-content: space-around;
+            justify-content: center;
         }
 
         #top-controls h1 {
@@ -131,7 +131,7 @@
             border-style: inset;
         }
         
-        button.play-button.playing {
+        button.play-button.playing, button.toggled-on {
             background: linear-gradient(to bottom, #00b33c, #008a2e);
             color: white;
             border-color: #00d447;
@@ -400,13 +400,18 @@
 
         <div class="control-group">
             <label for="song-structure-input">Song Structure</label>
-            <input type="text" id="song-structure-input" placeholder="e.g. ABABCA">
+            <input type="text" id="song-structure-input" placeholder="e.g. AB1AB2C">
             <div style="display:flex; gap: 5px;">
                 <button id="song-play-btn" class="play-button">Song Play</button>
                 <button id="export-midi-btn">Export Song MIDI</button>
             </div>
         </div>
         
+        <div class="control-group">
+            <label>Random Fills</label>
+            <button id="random-fills-btn">Fills OFF</button>
+        </div>
+
         <div class="control-group">
             <label for="example-song-select">Load Example Song</label>
             <select id="example-song-select">
@@ -451,6 +456,10 @@
         let songStructure = [];
         let currentSongSectionIndex = 0;
         let currentSongSequencerId = '';
+        let randomFillsEnabled = false;
+        let isPlayingFill = false;
+        let currentFillPattern = null;
+        let fillStepCount = 0;
         
         // --- MIDI & EXAMPLE SONG DATA ---
         let midiAccess = null;
@@ -464,6 +473,7 @@
             'tom1', 'tom2', 'tom3', 'floor-tom',
             'hi-hat-open', 'hi-hat-closed', 'snare', 'kick'
         ];
+        const FILL_INSTRUMENTS = ['snare', 'tom1', 'tom2', 'tom3', 'floor-tom'];
         
         const INSTRUMENT_MIDI_NOTES = {
             'kick': 36, 'snare': 38, 'hi-hat-closed': 42, 'hi-hat-open': 46, 'floor-tom': 41, 
@@ -476,7 +486,6 @@
             50: 'tom1', 49: 'crash1', 57: 'crash2', 51: 'ride', 52: 'china', 55: 'crash1', 59: 'ride',
         };
         
-        // RESTORED: Pre-defined rhythm patterns for the individual sequencer dropdowns
         const RHYTHM_PATTERNS = {
             'Four on the Floor': { 'kick': [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], 'snare': [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], 'hi-hat-closed': [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], },
             'Basic Rock': { 'kick': [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0], 'snare': [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], 'hi-hat-closed': [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1], },
@@ -500,6 +509,7 @@
         const midiInSelect = document.getElementById('midi-in-select');
         const midiOutSelect = document.getElementById('midi-out-select');
         const exampleSongSelect = document.getElementById('example-song-select');
+        const randomFillsBtn = document.getElementById('random-fills-btn');
         
         async function initAudio() {
             if (audioContext) return;
@@ -536,11 +546,10 @@
 
             const header = document.createElement('div');
             header.className = 'sequencer-header';
-            // UPDATED: Re-added the "Load Pattern" control group to the header HTML
             header.innerHTML = `
                 <button class="remove-sequencer-btn" data-sequencer-id="${id}">X</button>
                 <button class="hide-show-btn" data-sequencer-id="${id}">Hide</button>
-                <input type="text" class="sequencer-name" value="${name}" data-sequencer-id="${id}" data-old-name="${name}">
+                <input type="text" class="sequencer-name" value="${name}" data-sequencer-id="${id}" data-old-name="${name}" maxlength="1">
                 <div class="control-group">
                     <label>Steps</label>
                     <input type="number" class="steps-input" value="16" min="4" max="64" data-sequencer-id="${id}">
@@ -582,7 +591,6 @@
                     updateSequencerGrid(id, newSteps);
                 }
             };
-            // RESTORED: Attach listener for the pattern dropdown
             header.querySelector('.pattern-select').onchange = handlePatternLoad;
             header.querySelector('.rnd-all-btn').onclick = () => randomizeSequencer(id);
             header.querySelector('.play-button').onclick = () => togglePlay(id);
@@ -674,18 +682,30 @@
                 let newName;
                 do {
                     newName = String.fromCharCode(65 + nextCharIndex++);
-                } while(existingNames.has(newName));
+                } while(existingNames.has(newName) || nextCharIndex > 26);
                 
-                existingNames.add(newName);
-                createSequencer(newName, newName);
+                if (nextCharIndex <= 26) {
+                    existingNames.add(newName);
+                    createSequencer(newName, newName);
+                } else {
+                    alert("Maximum number of named sequencers (A-Z) reached.");
+                    break;
+                }
             }
         }
         function handleNameChange(e) {
             const newName = e.target.value.toUpperCase();
             const oldName = e.target.dataset.oldName;
+
+            if (!/^[A-Z]$/.test(newName)) {
+                alert(`Name must be a single letter (A-Z). Reverting.`);
+                e.target.value = oldName;
+                return;
+            }
+
             const isTaken = Object.values(sequencersData).some(data => data.name === newName && data.name !== oldName);
-            if (isTaken || !newName) {
-                alert(`Name "${newName}" is invalid or already in use. Reverting.`);
+            if (isTaken) {
+                alert(`Name "${newName}" is already in use. Reverting.`);
                 e.target.value = oldName;
                 return;
             }
@@ -733,7 +753,6 @@
              updateSequencerGrid(sequencerId, data.steps);
         }
         
-        // RESTORED: Handles loading a pattern from an individual sequencer's dropdown
         function handlePatternLoad(e) {
             const patternName = e.target.value;
             if (!patternName) return;
@@ -742,10 +761,8 @@
             const pattern = RHYTHM_PATTERNS[patternName];
             const data = sequencersData[sequencerId];
             
-            // Clear current pattern for this sequencer
             INSTRUMENTS.forEach(instrument => data.grid[instrument].fill(false));
 
-            // Load new pattern data
             for (const instrument in pattern) {
                 if (INSTRUMENTS.includes(instrument)) {
                     for (let i = 0; i < data.steps && i < pattern[instrument].length; i++) {
@@ -753,7 +770,6 @@
                     }
                 }
             }
-            // Redraw the UI to reflect the new data
             updateSequencerGrid(sequencerId, data.steps);
             e.target.value = ""; // Reset dropdown
         }
@@ -785,45 +801,87 @@
             const timePerStep = (60.0 / bpm) / 4.0;
             nextNoteTime += timePerStep;
 
-            let activeId = isSongPlaying ? currentSongSequencerId : document.querySelector('.play-button.playing')?.dataset.sequencerId;
-
-            if (!activeId || !sequencersData[activeId]) {
-                stop();
-                return;
+            let activeId, numSteps;
+            if (isSongPlaying && isPlayingFill) {
+                activeId = currentSongSequencerId; 
+                numSteps = fillStepCount;
+            } else if (isSongPlaying) {
+                activeId = currentSongSequencerId;
+                if (!activeId || !sequencersData[activeId]) { stop(); return; }
+                numSteps = sequencersData[activeId].steps;
+            } else { // Normal sequencer playback
+                activeId = document.querySelector('.play-button.playing')?.dataset.sequencerId;
+                if (!activeId || !sequencersData[activeId]) { stop(); return; }
+                numSteps = sequencersData[activeId].steps;
             }
 
-            const numSteps = sequencersData[activeId].steps;
-            
             currentStep++;
 
             if (currentStep >= numSteps) {
+                currentStep = 0;
+
                 if (isSongPlaying) {
+                    if (isPlayingFill) {
+                        isPlayingFill = false;
+                        currentFillPattern = null;
+                    }
+
                     currentSongSectionIndex++;
                     if (currentSongSectionIndex >= songStructure.length) {
                         currentSongSectionIndex = 0;
                     }
                     
-                    const nextSectionName = songStructure[currentSongSectionIndex];
-                    const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === nextSectionName);
-                    
-                    if (nextSequencer) {
-                        currentSongSequencerId = nextSequencer[0];
+                    const nextSectionIdentifier = songStructure[currentSongSectionIndex];
+
+                    if (randomFillsEnabled && /^[1-9]$/.test(nextSectionIdentifier)) {
+                        isPlayingFill = true;
+                        fillStepCount = parseInt(nextSectionIdentifier, 10);
+                        currentFillPattern = generateFillPattern(fillStepCount);
+                        // The activeId (and thus sound settings) from the previous section is intentionally carried over.
                     } else {
-                        console.error(`Song section "${nextSectionName}" not found. Stopping playback.`);
-                        stop();
-                        return;
+                        isPlayingFill = false;
+                        const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === nextSectionIdentifier);
+                        
+                        if (nextSequencer) {
+                            currentSongSequencerId = nextSequencer[0];
+                        } else {
+                            console.error(`Song section "${nextSectionIdentifier}" not found. Stopping playback.`);
+                            stop();
+                            return;
+                        }
                     }
                 }
-                currentStep = 0;
             }
+        }
+        
+        function generateFillPattern(numSteps) {
+            const fillGrid = {};
+            INSTRUMENTS.forEach(instrument => {
+                fillGrid[instrument] = Array(numSteps).fill(false);
+            });
+            for (let i = 0; i < numSteps; i++) {
+                const randomInstrument = FILL_INSTRUMENTS[Math.floor(Math.random() * FILL_INSTRUMENTS.length)];
+                fillGrid[randomInstrument][i] = true;
+            }
+            return fillGrid;
         }
 
         function scheduleNote(step, time) {
-            let activeSequencerId = isSongPlaying ? currentSongSequencerId : document.querySelector('.play-button.playing')?.dataset.sequencerId;
+            let activeSequencerId;
+            if (isSongPlaying) {
+                activeSequencerId = currentSongSequencerId;
+            } else {
+                const playingBtn = document.querySelector('.play-button.playing');
+                activeSequencerId = playingBtn ? playingBtn.dataset.sequencerId : null;
+            }
+
             if(!activeSequencerId || !sequencersData[activeSequencerId]) return;
+            
             const data = sequencersData[activeSequencerId];
+            const gridToUse = (isSongPlaying && isPlayingFill) ? currentFillPattern : data.grid;
+
             INSTRUMENTS.forEach(instrument => {
-                if (data.grid[instrument][step]) {
+                if (gridToUse && gridToUse[instrument] && gridToUse[instrument][step]) {
                     const velocity = data.velocities[instrument][step];
                     playSample(instrument, data.volumes[instrument], data.panning[instrument], velocity, time);
                     if (currentMidiOutput && INSTRUMENT_MIDI_NOTES[instrument]) {
@@ -838,7 +896,13 @@
                     }
                 }
             });
-            setTimeout(() => updatePlayhead(step, activeSequencerId), (time - audioContext.currentTime) * 1000);
+            
+            if (!isPlayingFill) {
+                setTimeout(() => updatePlayhead(step, activeSequencerId), (time - audioContext.currentTime) * 1000);
+            } else {
+                 // Don't show playhead during fills to avoid confusion
+                 updatePlayhead(-1, null);
+            }
         }
 
         let lastPlayhead = { step: -1, id: null };
@@ -846,10 +910,12 @@
              if (lastPlayhead.id && document.getElementById(`sequencer-${lastPlayhead.id}`)) {
                 document.querySelectorAll(`.step-checkbox[data-sequencer-id="${lastPlayhead.id}"][data-step="${lastPlayhead.step}"]`).forEach(el => el.classList.remove('playing'));
              }
-             if (document.getElementById(`sequencer-${sequencerId}`)) {
+             if (sequencerId && document.getElementById(`sequencer-${sequencerId}`)) {
                 document.querySelectorAll(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-step="${step}"]`).forEach(el => el.classList.add('playing'));
+                lastPlayhead = { step, id: sequencerId };
+             } else {
+                lastPlayhead = { step: -1, id: null };
              }
-             lastPlayhead = { step, id: sequencerId };
         }
         
         async function togglePlay(sequencerId, isSongMode = false) {
@@ -878,7 +944,7 @@
                  if (playBtn) { playBtn.classList.add('playing'); playBtn.textContent = 'Stop'; }
              }
              
-             currentStep = 0;
+             currentStep = -1; // Start at -1 so first call to nextNote() starts at step 0
              nextNoteTime = audioContext.currentTime;
              schedulerTimerID = setInterval(scheduler, 25.0);
         }
@@ -886,6 +952,8 @@
         function stop() {
             isPlaying = false; 
             isSongPlaying = false;
+            isPlayingFill = false;
+            currentFillPattern = null;
             clearInterval(schedulerTimerID);
             document.querySelectorAll('.play-button').forEach(b => { 
                 b.classList.remove('playing');
@@ -893,10 +961,7 @@
                 else if (b.dataset.sequencerId) b.textContent = 'Play';
             });
 
-            if (lastPlayhead.id && document.getElementById(`sequencer-${lastPlayhead.id}`)) {
-                document.querySelectorAll(`.step-checkbox[data-sequencer-id="${lastPlayhead.id}"]`).forEach(el => el.classList.remove('playing'));
-            }
-            lastPlayhead = { step: -1, id: null };
+            updatePlayhead(-1, null);
             currentStep = 0;
         }
 
@@ -906,22 +971,32 @@
                 return;
             }
             try {
-                const structureStr = songStructureInput.value.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
-                if(!structureStr) { alert('Please enter a song structure (e.g., ABAB).'); return; }
+                const structureStr = songStructureInput.value; // Already sanitized by input event
+                if(!structureStr) { alert('Please enter a song structure (e.g., AB1AB2C).'); return; }
 
                 const availableNames = Object.values(sequencersData).map(d => d.name);
                 songStructure = [...structureStr];
                 
-                const firstSectionName = songStructure[0];
-                if (!availableNames.includes(firstSectionName)) {
-                    throw new Error(`The first section of your song "${firstSectionName}" does not match any existing sequencer names.`);
+                const firstSectionIdentifier = songStructure[0];
+                let firstSequencerEntry;
+
+                if (/^[A-Z]$/.test(firstSectionIdentifier)) {
+                     firstSequencerEntry = Object.entries(sequencersData).find(([id, data]) => data.name === firstSectionIdentifier);
+                     if (!firstSequencerEntry) throw new Error(`The first section "${firstSectionIdentifier}" does not match any existing sequencers.`);
+                } else if (/^[1-9]$/.test(firstSectionIdentifier)) {
+                    if (Object.keys(sequencersData).length > 0) {
+                        // If song starts with a fill, use the first available sequencer for sounds.
+                        firstSequencerEntry = Object.entries(sequencersData)[0];
+                    } else {
+                        throw new Error(`Cannot start a song with a fill because no sequencers exist to provide sounds.`);
+                    }
+                } else {
+                     throw new Error(`The first item in the song structure "${firstSectionIdentifier}" is not a valid section or fill.`);
                 }
                 
-                const firstSequencerEntry = Object.entries(sequencersData).find(([id, data]) => data.name === firstSectionName);
-
                 if (firstSequencerEntry) {
                     currentSongSequencerId = firstSequencerEntry[0];
-                    currentSongSectionIndex = 0;
+                    currentSongSectionIndex = -1; // Start at -1 so first call to nextNote advances to index 0
                     togglePlay(null, true);
                 }
             } catch(error) {
@@ -974,36 +1049,50 @@
 
         function exportSongToMidi() {
             if (typeof window.MidiWriter === 'undefined') {
-                alert('MIDI library is not ready yet. Please try again in a moment.');
-                console.error('MidiWriter object not found on window.');
+                alert('MIDI library is not ready yet.');
                 return;
             }
-
             try {
-                const structureStr = songStructureInput.value.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+                const structureStr = songStructureInput.value;
                 if (!structureStr) { alert('Please enter a song structure to export.'); return; }
                 
-                const songSections = [...structureStr];
-                
+                const songItems = [...structureStr];
                 const track = new window.MidiWriter.Track();
                 track.setTempo(bpm);
                 track.addEvent(new window.MidiWriter.ProgramChangeEvent({instrument: 1, channel: 10}));
 
                 let totalTicks = 0;
-                const ticksPerStep = 128;
+                const ticksPerStep = 128; 
 
-                songSections.forEach(sectionName => {
-                    const sequencerId = Object.keys(sequencersData).find(key => sequencersData[key].name === sectionName);
-                    if (!sequencerId) {
-                        console.warn(`Skipping unknown section "${sectionName}" in MIDI export.`);
-                        return;
+                songItems.forEach(item => {
+                    let gridToUse, numSteps, sequencerData;
+
+                    if (/^[A-Z]$/.test(item)) {
+                        const sequencerId = Object.keys(sequencersData).find(key => sequencersData[key].name === item);
+                        if (!sequencerId) {
+                            console.warn(`Skipping unknown section "${item}" in MIDI export.`);
+                            return;
+                        }
+                        sequencerData = sequencersData[sequencerId];
+                        gridToUse = sequencerData.grid;
+                        numSteps = sequencerData.steps;
+                    } else if (/^[1-9]$/.test(item)) {
+                        numSteps = parseInt(item, 10);
+                        gridToUse = generateFillPattern(numSteps);
+                        const firstSequencerId = Object.keys(sequencersData)[0];
+                        if (!firstSequencerId) {
+                            console.warn(`Skipping fill section in MIDI export because no sequencers exist.`);
+                            return;
+                        }
+                        sequencerData = sequencersData[firstSequencerId]; // Use first sequencer for velocities
+                    } else {
+                        return; // Skip invalid items
                     }
-                    
-                    const sequencerData = sequencersData[sequencerId];
-                    for (let step = 0; step < sequencerData.steps; step++) {
+
+                    for (let step = 0; step < numSteps; step++) {
                         const notesForThisStep = [];
                         INSTRUMENTS.forEach(instrument => {
-                            if (sequencerData.grid[instrument][step] && INSTRUMENT_MIDI_NOTES[instrument]) {
+                            if (gridToUse[instrument][step] && INSTRUMENT_MIDI_NOTES[instrument]) {
                                 notesForThisStep.push(new window.MidiWriter.NoteEvent({ 
                                     pitch: [INSTRUMENT_MIDI_NOTES[instrument]], 
                                     duration: '16', 
@@ -1017,7 +1106,7 @@
                             track.addEvent(notesForThisStep, () => ({ sequential: false }));
                         }
                     }
-                    totalTicks += sequencerData.steps * ticksPerStep;
+                    totalTicks += numSteps * ticksPerStep;
                 });
 
                 const writer = new window.MidiWriter.Writer([track]);
@@ -1027,7 +1116,6 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-
             } catch(error) {
                 console.error("Error exporting MIDI:", error);
                 alert("An error occurred during MIDI export: " + error.message);
@@ -1048,7 +1136,7 @@
                 }
             } catch (error) {
                 console.error("Failed to load example songs:", error);
-                alert("Could not load example songs. Make sure 'songs.json' is in the same folder as the HTML file.");
+                // alert("Could not load example songs. Make sure 'songs.json' is in the same folder as the HTML file.");
             }
         }
         
@@ -1061,16 +1149,12 @@
         function handleLoadExampleSong(e) {
             const songName = e.target.value;
             if (!songName) return;
-
             clearAllSequencers();
-            
             const songData = exampleSongsData[songName];
-            
             for (const patternName in songData.patterns) {
                 createSequencer(patternName, patternName);
                 const pattern = songData.patterns[patternName];
                 const data = sequencersData[patternName];
-
                 for (const instrument in pattern) {
                     if (INSTRUMENTS.includes(instrument)) {
                         for (let i = 0; i < data.steps && i < pattern[instrument].length; i++) {
@@ -1080,22 +1164,28 @@
                 }
                 updateSequencerGrid(patternName, data.steps);
             }
-            
             tempoInput.value = songData.bpm;
             bpm = songData.bpm;
             songStructureInput.value = songData.structure;
-
             e.target.value = "";
         }
-
 
         // --- INITIAL SETUP & EVENT LISTENERS ---
         tempoInput.addEventListener('change', (e) => bpm = parseInt(e.target.value, 10));
         tapTempoBtn.addEventListener('click', tapTempo);
-        humanizeBtn.addEventListener('click', () => { isHumanizeOn = !isHumanizeOn; humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF"; humanizeBtn.classList.toggle('playing', isHumanizeOn); });
+        humanizeBtn.addEventListener('click', () => { isHumanizeOn = !isHumanizeOn; humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF"; humanizeBtn.classList.toggle('toggled-on', isHumanizeOn); });
         humanizeSlider.addEventListener('input', (e) => humanizeAmount = parseFloat(e.target.value));
         insertSequencersBtn.addEventListener('click', handleInsertSequencers);
         songPlayBtn.addEventListener('click', playSong);
+        songStructureInput.addEventListener('input', (e) => {
+            const sanitizedValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (e.target.value !== sanitizedValue) e.target.value = sanitizedValue;
+        });
+        randomFillsBtn.addEventListener('click', () => {
+            randomFillsEnabled = !randomFillsEnabled;
+            randomFillsBtn.textContent = randomFillsEnabled ? "Fills ON" : "Fills OFF";
+            randomFillsBtn.classList.toggle('toggled-on', randomFillsEnabled);
+        });
         exportMidiBtn.addEventListener('click', exportSongToMidi);
         scanMidiBtn.addEventListener('click', initMidi);
         midiInSelect.onchange = selectMidiInput;
