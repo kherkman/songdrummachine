@@ -7,8 +7,7 @@ const RockForgeExporter = {
      */
     _generateFillPattern: function(numSteps, fillInstruments) {
         const fillGrid = {};
-        // Initialize grid for all possible instruments, though only fill-specific ones will be used.
-        // This prevents errors if an instrument is not in the fill list.
+        // Initialize grid for all possible instruments.
         const allInstruments = [
             'crash1', 'crash2', 'ride', 'china',
             'tom1', 'tom2', 'tom3', 'floor-tom',
@@ -54,7 +53,10 @@ const RockForgeExporter = {
             track.addEvent(new window.MidiWriter.ProgramChangeEvent({instrument: 1, channel: 10}));
 
             let totalTicks = 0;
-            const ticksPerStep = 128; // 128 ticks per 16th note
+            const ticksPerStep = 128;
+
+            // ADDED: Variable to track the last used sequencer for fill sounds
+            let lastValidSequencerId = null;
 
             songItems.forEach(item => {
                 let gridToUse, numSteps, currentSequencerData;
@@ -63,22 +65,31 @@ const RockForgeExporter = {
                     const sequencerId = Object.keys(sequencersData).find(key => sequencersData[key].name === item);
                     if (!sequencerId) {
                         console.warn(`Skipping unknown section "${item}" in MIDI export.`);
-                        return;
+                        return; // continue forEach
                     }
+                    // ADDED: Track this sequencer as the last valid one
+                    lastValidSequencerId = sequencerId;
+
                     currentSequencerData = sequencersData[sequencerId];
                     gridToUse = currentSequencerData.grid;
                     numSteps = currentSequencerData.steps;
+
                 } else if (/^[1-9]$/.test(item)) {
                     numSteps = parseInt(item, 10);
                     gridToUse = this._generateFillPattern(numSteps, FILL_INSTRUMENTS);
                     
-                    const firstSequencerId = Object.keys(sequencersData)[0];
-                    if (!firstSequencerId) {
-                        console.warn(`Skipping fill section in MIDI export because no sequencers exist to provide sounds.`);
-                        return;
+                    // --- CHANGED: This block is the core of the fix ---
+                    // Use the last tracked sequencer ID. If none exists (e.g., song starts with a fill),
+                    // fall back to the first available sequencer.
+                    const sequencerIdForFillSounds = lastValidSequencerId || Object.keys(sequencersData)[0];
+
+                    if (!sequencerIdForFillSounds) {
+                        console.warn(`Skipping fill section in MIDI export because no preceding section or default sequencer exists.`);
+                        return; // continue forEach
                     }
-                    // Use the first sequencer for velocity/sound settings for the fill
-                    currentSequencerData = sequencersData[firstSequencerId];
+                    currentSequencerData = sequencersData[sequencerIdForFillSounds];
+                    // --- END OF CHANGE ---
+
                 } else {
                     return; // Skip invalid items
                 }
@@ -86,10 +97,12 @@ const RockForgeExporter = {
                 for (let step = 0; step < numSteps; step++) {
                     const notesForThisStep = [];
                     INSTRUMENTS.forEach(instrument => {
+                        // Ensure the instrument exists in the grid (important for fills)
                         if (gridToUse[instrument] && gridToUse[instrument][step] && INSTRUMENT_MIDI_NOTES[instrument]) {
                             notesForThisStep.push(new window.MidiWriter.NoteEvent({ 
                                 pitch: [INSTRUMENT_MIDI_NOTES[instrument]], 
                                 duration: '16', 
+                                // Use the correct sequencer's velocity data
                                 velocity: Math.round(currentSequencerData.velocities[instrument][step] / 127 * 100), 
                                 startTick: totalTicks + (step * ticksPerStep), 
                                 channel: 10 
