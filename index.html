@@ -557,7 +557,7 @@
             sequencerDiv.className = 'sequencer-container';
             sequencerDiv.id = `sequencer-${id}`;
 
-            sequencersData[id] = { name: name, steps: 16, timeSignature: '2/8', grid: {}, volumes: {}, velocities: {}, panning: {} };
+            sequencersData[id] = { name: name, steps: 16, timeSignature: '4/4', grid: {}, volumes: {}, velocities: {}, panning: {} };
 
             const header = document.createElement('div');
             header.className = 'sequencer-header';
@@ -572,12 +572,11 @@
                 <div class="control-group">
                     <label>Time Sig</label>
                     <select class="time-signature-select" data-sequencer-id="${id}">
-                        <option value="2/8">2/4</option>
-                        <option value="3/8">3/4</option>
-                        <option value="4/8">4/4</option>
-                        <option value="5/8">5/4</option>
-                        <option value="6/8">6/4</option>
-                        <option value="7/8">7/4</option>
+                        <option value="4/4">4/4</option>
+                        <option value="3/4">3/4</option>
+                        <option value="2/4">2/4</option>
+                        <option value="5/4">5/4</option>
+                        <option value="7/8">7/8</option>
                     </select>
                 </div>
                 <div class="control-group">
@@ -1113,81 +1112,6 @@
                 }
             }
         }
-
-        function exportSongToMidi() {
-            if (typeof window.MidiWriter === 'undefined') {
-                alert('MIDI library is not ready yet.');
-                return;
-            }
-            try {
-                const structureStr = songStructureInput.value;
-                if (!structureStr) { alert('Please enter a song structure to export.'); return; }
-                
-                const songItems = [...structureStr];
-                const track = new window.MidiWriter.Track();
-                track.setTempo(bpm);
-                track.addEvent(new window.MidiWriter.ProgramChangeEvent({instrument: 1, channel: 10}));
-
-                let totalTicks = 0;
-                const ticksPerStep = 128; 
-
-                songItems.forEach(item => {
-                    let gridToUse, numSteps, sequencerData;
-
-                    if (/^[A-Z]$/.test(item)) {
-                        const sequencerId = Object.keys(sequencersData).find(key => sequencersData[key].name === item);
-                        if (!sequencerId) {
-                            console.warn(`Skipping unknown section "${item}" in MIDI export.`);
-                            return;
-                        }
-                        sequencerData = sequencersData[sequencerId];
-                        gridToUse = sequencerData.grid;
-                        numSteps = sequencerData.steps;
-                    } else if (/^[1-9]$/.test(item)) {
-                        numSteps = parseInt(item, 10);
-                        gridToUse = generateFillPattern(numSteps);
-                        const firstSequencerId = Object.keys(sequencersData)[0];
-                        if (!firstSequencerId) {
-                            console.warn(`Skipping fill section in MIDI export because no sequencers exist.`);
-                            return;
-                        }
-                        sequencerData = sequencersData[firstSequencerId];
-                    } else {
-                        return;
-                    }
-
-                    for (let step = 0; step < numSteps; step++) {
-                        const notesForThisStep = [];
-                        INSTRUMENTS.forEach(instrument => {
-                            if (gridToUse[instrument][step] && INSTRUMENT_MIDI_NOTES[instrument]) {
-                                notesForThisStep.push(new window.MidiWriter.NoteEvent({ 
-                                    pitch: [INSTRUMENT_MIDI_NOTES[instrument]], 
-                                    duration: '16', 
-                                    velocity: Math.round(sequencerData.velocities[instrument][step] / 127 * 100), 
-                                    startTick: totalTicks + (step * ticksPerStep), 
-                                    channel: 10 
-                                }));
-                            }
-                        });
-                        if (notesForThisStep.length > 0) {
-                            track.addEvent(notesForThisStep, () => ({ sequential: false }));
-                        }
-                    }
-                    totalTicks += numSteps * ticksPerStep;
-                });
-
-                const writer = new window.MidiWriter.Writer([track]);
-                const link = document.createElement('a');
-                link.href = writer.dataUri();
-                link.download = "rockforge_song.mid";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } catch(error) {
-                console.error("Error exporting MIDI:", error);
-                alert("An error occurred during MIDI export: " + error.message);
-            }
-        }
         
         async function loadExampleSongs() {
             try {
@@ -1254,7 +1178,17 @@
             randomFillsBtn.textContent = randomFillsEnabled ? "Fills ON" : "Fills OFF";
             randomFillsBtn.classList.toggle('toggled-on', randomFillsEnabled);
         });
-        exportMidiBtn.addEventListener('click', exportSongToMidi);
+        exportMidiBtn.addEventListener('click', () => {
+            // Call the function from the external script
+            RockForgeExporter.exportSong({
+                songStructure: songStructureInput.value,
+                sequencersData: sequencersData,
+                bpm: bpm,
+                INSTRUMENTS: INSTRUMENTS,
+                INSTRUMENT_MIDI_NOTES: INSTRUMENT_MIDI_NOTES,
+                FILL_INSTRUMENTS: FILL_INSTRUMENTS
+            });
+        });
         scanMidiBtn.addEventListener('click', initMidi);
         midiInSelect.onchange = selectMidiInput;
         midiOutSelect.onchange = (e) => {
@@ -1268,6 +1202,9 @@
         loadExampleSongs();
     });
     </script>
+    
+    <!-- Add the new MIDI exporter script before the main script -->
+    <script src="midi-exporter.js"></script>
 
 </body>
 </html>
