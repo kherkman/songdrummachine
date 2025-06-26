@@ -311,6 +311,11 @@
             outline: 2px solid var(--led-playhead);
             box-shadow: 0 0 10px var(--led-playhead);
         }
+        
+        .step-checkbox.bar-start:not(:checked) {
+            background-color: #252525;
+            border-color: #333;
+        }
 
         .velocity-slider {
             -webkit-appearance: none;
@@ -435,7 +440,7 @@
     </script>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
         // --- GLOBAL STATE & CORE VARIABLES ---
         let audioContext;
         const audioBuffers = {};
@@ -466,6 +471,9 @@
         let currentMidiInput = null;
         let currentMidiOutput = null;
         let exampleSongsData = {};
+        
+        // --- PATTERN DATA (LOADED FROM JSON) ---
+        let RHYTHM_PATTERNS = {};
 
         // --- CONSTANTS ---
         const INSTRUMENTS = [
@@ -486,13 +494,6 @@
             50: 'tom1', 49: 'crash1', 57: 'crash2', 51: 'ride', 52: 'china', 55: 'crash1', 59: 'ride',
         };
         
-        const RHYTHM_PATTERNS = {
-            'Four on the Floor': { 'kick': [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], 'snare': [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], 'hi-hat-closed': [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], },
-            'Basic Rock': { 'kick': [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0], 'snare': [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], 'hi-hat-closed': [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1], },
-            'Blast Beat': { 'kick': [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1], 'snare': [0,1,0,1, 0,1,0,1, 0,1,0,1, 0,1,0,1], 'ride': [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], },
-            'Funky Drummer': { 'kick': [1,0,0,1, 0,0,1,0, 0,1,0,0, 1,0,0,0], 'snare': [0,0,1,0, 1,0,0,1, 0,0,1,0, 0,0,1,0], 'hi-hat-closed': [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1], 'hi-hat-open': [0,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,1], },
-        };
-
         // --- DOM ELEMENT REFERENCES ---
         const sequencersContainer = document.getElementById('sequencers-container');
         const tempoInput = document.getElementById('tempo-input');
@@ -537,12 +538,26 @@
             console.log('All samples loaded.');
         }
 
+        async function loadRhythmPatterns() {
+            try {
+                const response = await fetch('rhythms.json');
+                if (!response.ok) {
+                    throw new Error(`Could not load rhythms.json. Status: ${response.status}`);
+                }
+                RHYTHM_PATTERNS = await response.json();
+                console.log('Rhythm patterns loaded successfully.');
+            } catch (error) {
+                console.error("Failed to load rhythm patterns:", error);
+                alert("Could not load rhythm patterns. Make sure 'rhythms.json' is in the same folder as the HTML file and you are running a local server.");
+            }
+        }
+
         function createSequencer(id, name) {
             const sequencerDiv = document.createElement('div');
             sequencerDiv.className = 'sequencer-container';
             sequencerDiv.id = `sequencer-${id}`;
 
-            sequencersData[id] = { name: name, steps: 16, grid: {}, volumes: {}, velocities: {}, panning: {} };
+            sequencersData[id] = { name: name, steps: 16, timeSignature: '2/8', grid: {}, volumes: {}, velocities: {}, panning: {} };
 
             const header = document.createElement('div');
             header.className = 'sequencer-header';
@@ -553,6 +568,17 @@
                 <div class="control-group">
                     <label>Steps</label>
                     <input type="number" class="steps-input" value="16" min="4" max="64" data-sequencer-id="${id}">
+                </div>
+                <div class="control-group">
+                    <label>Time Sig</label>
+                    <select class="time-signature-select" data-sequencer-id="${id}">
+                        <option value="2/8">2/4</option>
+                        <option value="3/8">3/4</option>
+                        <option value="4/8">4/4</option>
+                        <option value="5/8">5/4</option>
+                        <option value="6/8">6/4</option>
+                        <option value="7/8">7/4</option>
+                    </select>
                 </div>
                 <div class="control-group">
                     <label>Load Pattern</label>
@@ -591,6 +617,7 @@
                     updateSequencerGrid(id, newSteps);
                 }
             };
+            header.querySelector('.time-signature-select').onchange = handleTimeSignatureChange;
             header.querySelector('.pattern-select').onchange = handlePatternLoad;
             header.querySelector('.rnd-all-btn').onclick = () => randomizeSequencer(id);
             header.querySelector('.play-button').onclick = () => togglePlay(id);
@@ -656,6 +683,36 @@
                 gridDiv.appendChild(row);
             });
             addGridEventListeners(sequencerId);
+            updateBarHighlighting(sequencerId);
+        }
+
+        function handleTimeSignatureChange(e) {
+            const sequencerId = e.target.dataset.sequencerId;
+            const newSignature = e.target.value;
+            sequencersData[sequencerId].timeSignature = newSignature;
+            updateBarHighlighting(sequencerId);
+        }
+
+        function updateBarHighlighting(sequencerId) {
+            const container = document.getElementById(`sequencer-${sequencerId}`);
+            if (!container) return;
+
+            container.querySelectorAll('.bar-start').forEach(el => el.classList.remove('bar-start'));
+            
+            const data = sequencersData[sequencerId];
+            if (!data) return;
+
+            const [beats, subdivision] = data.timeSignature.split('/').map(Number);
+            const stepsPerBeat = subdivision === 8 ? 2 : 4;
+            const stepsPerBar = beats * stepsPerBeat;
+
+            if (stepsPerBar <= 0) return;
+
+            for (let i = 0; i < data.steps; i++) {
+                if (i % stepsPerBar === 0) {
+                    container.querySelectorAll(`.step-checkbox[data-step="${i}"]`).forEach(cb => cb.classList.add('bar-start'));
+                }
+            }
         }
         
         function addGridEventListeners(sequencerId) {
@@ -758,20 +815,33 @@
             if (!patternName) return;
 
             const sequencerId = e.target.dataset.sequencerId;
-            const pattern = RHYTHM_PATTERNS[patternName];
+            const patternData = RHYTHM_PATTERNS[patternName];
             const data = sequencersData[sequencerId];
-            
+
+            const newSteps = patternData.steps;
+            const newTimeSignature = patternData.timeSignature;
+            const patternGrid = patternData.pattern;
+
+            data.steps = newSteps;
+            data.timeSignature = newTimeSignature;
+
+            const header = document.querySelector(`#sequencer-${sequencerId} .sequencer-header`);
+            header.querySelector('.steps-input').value = newSteps;
+            header.querySelector('.time-signature-select').value = newTimeSignature;
+
             INSTRUMENTS.forEach(instrument => data.grid[instrument].fill(false));
 
-            for (const instrument in pattern) {
+            for (const instrument in patternGrid) {
                 if (INSTRUMENTS.includes(instrument)) {
-                    for (let i = 0; i < data.steps && i < pattern[instrument].length; i++) {
-                        data.grid[instrument][i] = pattern[instrument][i] === 1;
+                    for (let i = 0; i < newSteps && i < patternGrid[instrument].length; i++) {
+                        data.grid[instrument][i] = patternGrid[instrument][i] === 1;
                     }
                 }
             }
-            updateSequencerGrid(sequencerId, data.steps);
-            e.target.value = ""; // Reset dropdown
+            
+            updateSequencerGrid(sequencerId, newSteps);
+            
+            e.target.value = ""; 
         }
         
         function playSample(instrument, volume, panning = 0, velocity = 127, time) {
@@ -809,7 +879,7 @@
                 activeId = currentSongSequencerId;
                 if (!activeId || !sequencersData[activeId]) { stop(); return; }
                 numSteps = sequencersData[activeId].steps;
-            } else { // Normal sequencer playback
+            } else {
                 activeId = document.querySelector('.play-button.playing')?.dataset.sequencerId;
                 if (!activeId || !sequencersData[activeId]) { stop(); return; }
                 numSteps = sequencersData[activeId].steps;
@@ -837,7 +907,6 @@
                         isPlayingFill = true;
                         fillStepCount = parseInt(nextSectionIdentifier, 10);
                         currentFillPattern = generateFillPattern(fillStepCount);
-                        // The activeId (and thus sound settings) from the previous section is intentionally carried over.
                     } else {
                         isPlayingFill = false;
                         const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === nextSectionIdentifier);
@@ -900,7 +969,6 @@
             if (!isPlayingFill) {
                 setTimeout(() => updatePlayhead(step, activeSequencerId), (time - audioContext.currentTime) * 1000);
             } else {
-                 // Don't show playhead during fills to avoid confusion
                  updatePlayhead(-1, null);
             }
         }
@@ -944,7 +1012,7 @@
                  if (playBtn) { playBtn.classList.add('playing'); playBtn.textContent = 'Stop'; }
              }
              
-             currentStep = -1; // Start at -1 so first call to nextNote() starts at step 0
+             currentStep = -1;
              nextNoteTime = audioContext.currentTime;
              schedulerTimerID = setInterval(scheduler, 25.0);
         }
@@ -971,7 +1039,7 @@
                 return;
             }
             try {
-                const structureStr = songStructureInput.value; // Already sanitized by input event
+                const structureStr = songStructureInput.value;
                 if(!structureStr) { alert('Please enter a song structure (e.g., AB1AB2C).'); return; }
 
                 const availableNames = Object.values(sequencersData).map(d => d.name);
@@ -985,7 +1053,6 @@
                      if (!firstSequencerEntry) throw new Error(`The first section "${firstSectionIdentifier}" does not match any existing sequencers.`);
                 } else if (/^[1-9]$/.test(firstSectionIdentifier)) {
                     if (Object.keys(sequencersData).length > 0) {
-                        // If song starts with a fill, use the first available sequencer for sounds.
                         firstSequencerEntry = Object.entries(sequencersData)[0];
                     } else {
                         throw new Error(`Cannot start a song with a fill because no sequencers exist to provide sounds.`);
@@ -996,7 +1063,7 @@
                 
                 if (firstSequencerEntry) {
                     currentSongSequencerId = firstSequencerEntry[0];
-                    currentSongSectionIndex = -1; // Start at -1 so first call to nextNote advances to index 0
+                    currentSongSectionIndex = -1;
                     togglePlay(null, true);
                 }
             } catch(error) {
@@ -1084,9 +1151,9 @@
                             console.warn(`Skipping fill section in MIDI export because no sequencers exist.`);
                             return;
                         }
-                        sequencerData = sequencersData[firstSequencerId]; // Use first sequencer for velocities
+                        sequencerData = sequencersData[firstSequencerId];
                     } else {
-                        return; // Skip invalid items
+                        return;
                     }
 
                     for (let step = 0; step < numSteps; step++) {
@@ -1136,7 +1203,6 @@
                 }
             } catch (error) {
                 console.error("Failed to load example songs:", error);
-                // alert("Could not load example songs. Make sure 'songs.json' is in the same folder as the HTML file.");
             }
         }
         
@@ -1170,7 +1236,9 @@
             e.target.value = "";
         }
 
-        // --- INITIAL SETUP & EVENT LISTENERS ---
+        // --- INITIALIZATION ---
+        await loadRhythmPatterns();
+
         tempoInput.addEventListener('change', (e) => bpm = parseInt(e.target.value, 10));
         tapTempoBtn.addEventListener('click', tapTempo);
         humanizeBtn.addEventListener('click', () => { isHumanizeOn = !isHumanizeOn; humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF"; humanizeBtn.classList.toggle('toggled-on', isHumanizeOn); });
