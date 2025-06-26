@@ -312,9 +312,15 @@
             box-shadow: 0 0 10px var(--led-playhead);
         }
         
-        .step-checkbox.bar-start:not(:checked) {
-            background-color: #252525;
-            border-color: #333;
+        /* For regular beats (2, 3, 4, etc.) - a subtle dark gray */
+        .beat-marker:not(:checked) {
+            background-color: #282828;
+        }
+
+        /* For the first beat of the bar (the "1") - a brighter, more prominent gray */
+        .bar-start:not(:checked) {
+            background-color: #404040; 
+            border-color: #555;
         }
 
         .velocity-slider {
@@ -574,8 +580,11 @@
                     <select class="time-signature-select" data-sequencer-id="${id}">
                         <option value="4/4">4/4</option>
                         <option value="3/4">3/4</option>
+                        <option value="6/8">6/8</option>
+                        <option value="12/8">12/8</option>
                         <option value="2/4">2/4</option>
                         <option value="5/4">5/4</option>
+                        <option value="5/8">5/8</option>
                         <option value="7/8">7/8</option>
                     </select>
                 </div>
@@ -696,20 +705,33 @@
             const container = document.getElementById(`sequencer-${sequencerId}`);
             if (!container) return;
 
-            container.querySelectorAll('.bar-start').forEach(el => el.classList.remove('bar-start'));
+            // Clear both old and new classes to be safe
+            container.querySelectorAll('.bar-start, .beat-marker').forEach(el => {
+                el.classList.remove('bar-start', 'beat-marker');
+            });
             
             const data = sequencersData[sequencerId];
             if (!data) return;
 
             const [beats, subdivision] = data.timeSignature.split('/').map(Number);
+            // A beat in x/4 time is 4 steps (quarter note). In x/8 time, it's 2 steps (eighth note).
             const stepsPerBeat = subdivision === 8 ? 2 : 4;
             const stepsPerBar = beats * stepsPerBeat;
 
             if (stepsPerBar <= 0) return;
 
             for (let i = 0; i < data.steps; i++) {
+                // Find all checkboxes for the current step index
+                const stepCheckboxes = container.querySelectorAll(`.step-checkbox[data-step="${i}"]`);
+                if (stepCheckboxes.length === 0) continue; // Skip if no checkboxes found
+
+                // Check if the step is the start of a bar (the "1")
                 if (i % stepsPerBar === 0) {
-                    container.querySelectorAll(`.step-checkbox[data-step="${i}"]`).forEach(cb => cb.classList.add('bar-start'));
+                    stepCheckboxes.forEach(cb => cb.classList.add('bar-start'));
+                } 
+                // Else, check if it's the start of any other beat
+                else if (i % stepsPerBeat === 0) {
+                    stepCheckboxes.forEach(cb => cb.classList.add('beat-marker'));
                 }
             }
         }
@@ -1062,7 +1084,7 @@
                 
                 if (firstSequencerEntry) {
                     currentSongSequencerId = firstSequencerEntry[0];
-                    currentSongSectionIndex = 0;
+                    currentSongSectionIndex = 0; // Corrected from -1 to 0
                     togglePlay(null, true);
                 }
             } catch(error) {
@@ -1139,24 +1161,54 @@
         function handleLoadExampleSong(e) {
             const songName = e.target.value;
             if (!songName) return;
+
+            if (isPlaying) stop();
+
             clearAllSequencers();
+            
             const songData = exampleSongsData[songName];
-            for (const patternName in songData.patterns) {
-                createSequencer(patternName, patternName);
-                const pattern = songData.patterns[patternName];
-                const data = sequencersData[patternName];
-                for (const instrument in pattern) {
-                    if (INSTRUMENTS.includes(instrument)) {
-                        for (let i = 0; i < data.steps && i < pattern[instrument].length; i++) {
-                            data.grid[instrument][i] = pattern[instrument][i] === 1;
+            if (!songData) {
+                console.error(`Could not find song data for "${songName}"`);
+                return;
+            }
+
+            // Create all necessary sequencer patterns first
+            if (songData.patterns) {
+                for (const patternName in songData.patterns) {
+                     createSequencer(patternName, patternName);
+                }
+            }
+            
+            // Now populate them with data
+            if (songData.patterns) {
+                for (const patternName in songData.patterns) {
+                    const patternDetails = songData.patterns[patternName];
+                    const data = sequencersData[patternName];
+
+                    if (!data) {
+                         console.warn(`Sequencer "${patternName}" was not created. Skipping pattern load.`);
+                         continue;
+                    }
+                    
+                    data.steps = patternDetails.steps || 16;
+                    data.timeSignature = patternDetails.timeSignature || '4/4';
+                    
+                    const patternGrid = patternDetails.pattern;
+                    for (const instrument in patternGrid) {
+                        if (INSTRUMENTS.includes(instrument)) {
+                            for (let i = 0; i < data.steps && i < patternGrid[instrument].length; i++) {
+                                data.grid[instrument][i] = patternGrid[instrument][i] === 1;
+                            }
                         }
                     }
+                    updateSequencerGrid(patternName, data.steps);
                 }
-                updateSequencerGrid(patternName, data.steps);
             }
+            
             tempoInput.value = songData.bpm;
             bpm = songData.bpm;
             songStructureInput.value = songData.structure;
+
             e.target.value = "";
         }
 
@@ -1179,7 +1231,6 @@
             randomFillsBtn.classList.toggle('toggled-on', randomFillsEnabled);
         });
         exportMidiBtn.addEventListener('click', () => {
-            // Call the function from the external script
             RockForgeExporter.exportSong({
                 songStructure: songStructureInput.value,
                 sequencersData: sequencersData,
@@ -1199,11 +1250,10 @@
         exampleSongSelect.addEventListener('change', handleLoadExampleSong);
 
         createSequencer('A', 'A');
-        loadExampleSongs();
+        await loadExampleSongs();
     });
     </script>
     
-    <!-- Add the new MIDI exporter script before the main script -->
     <script src="midi-exporter.js"></script>
 
 </body>
