@@ -892,50 +892,65 @@
             const timePerStep = (60.0 / bpm) / 4.0;
             nextNoteTime += timePerStep;
 
-            let activeId, numSteps;
-            if (isSongPlaying && isPlayingFill) {
-                activeId = currentSongSequencerId; 
-                numSteps = fillStepCount;
-            } else if (isSongPlaying) {
-                activeId = currentSongSequencerId;
-                if (!activeId || !sequencersData[activeId]) { stop(); return; }
-                numSteps = sequencersData[activeId].steps;
-            } else {
-                activeId = document.querySelector('.play-button.playing')?.dataset.sequencerId;
+            // This block determines the length of the currently playing segment.
+            let numSteps;
+            if (isSongPlaying) {
+                if (isPlayingFill) {
+                    numSteps = fillStepCount;
+                } else { // We are playing a pattern
+                    const patternData = sequencersData[currentSongSequencerId];
+                    if (!patternData) { stop(); return; }
+                    
+                    numSteps = patternData.steps;
+
+                    // Look ahead to see if the next section is a fill that will cut this pattern short.
+                    // This handles the "If fill length <= previous rhythm length, reduce..." part.
+                    if (currentSongSectionIndex + 1 < songStructure.length) {
+                        const nextIdentifier = songStructure[currentSongSectionIndex + 1];
+                        if (randomFillsEnabled && /^[1-9]$/.test(nextIdentifier)) {
+                            const fillLength = parseInt(nextIdentifier, 10);
+                            if (fillLength <= numSteps) {
+                                numSteps -= fillLength; // Truncate the pattern's length.
+                            }
+                        }
+                    }
+                }
+            } else { // Single pattern playback mode (unchanged)
+                const activeId = document.querySelector('.play-button.playing')?.dataset.sequencerId;
                 if (!activeId || !sequencersData[activeId]) { stop(); return; }
                 numSteps = sequencersData[activeId].steps;
             }
 
+            // Advance the step and check if the current segment has finished.
             currentStep++;
-
             if (currentStep >= numSteps) {
                 currentStep = 0;
 
+                // If in song mode, transition to the next section.
                 if (isSongPlaying) {
-                    if (isPlayingFill) {
-                        isPlayingFill = false;
-                        currentFillPattern = null;
-                    }
-
+                    // The previous segment is done, so we always advance in the song structure.
                     currentSongSectionIndex++;
                     if (currentSongSectionIndex >= songStructure.length) {
-                        currentSongSectionIndex = 0;
+                        currentSongSectionIndex = 0; // Loop song.
                     }
-                    
-                    const nextSectionIdentifier = songStructure[currentSongSectionIndex];
 
-                    if (randomFillsEnabled && /^[1-9]$/.test(nextSectionIdentifier)) {
+                    const newIdentifier = songStructure[currentSongSectionIndex];
+
+                    // Is the new section a fill? This handles both appended and standalone fills.
+                    if (randomFillsEnabled && /^[1-9]$/.test(newIdentifier)) {
                         isPlayingFill = true;
-                        fillStepCount = parseInt(nextSectionIdentifier, 10);
+                        fillStepCount = parseInt(newIdentifier, 10);
                         currentFillPattern = generateFillPattern(fillStepCount);
-                    } else {
+                        // We keep the `currentSongSequencerId` from the previous pattern for sounds.
+                    } 
+                    // Is the new section a pattern?
+                    else {
                         isPlayingFill = false;
-                        const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === nextSectionIdentifier);
-                        
+                        const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === newIdentifier);
                         if (nextSequencer) {
                             currentSongSequencerId = nextSequencer[0];
                         } else {
-                            console.error(`Song section "${nextSectionIdentifier}" not found. Stopping playback.`);
+                            console.error(`Song section "${newIdentifier}" not found. Stopping playback.`);
                             stop();
                             return;
                         }
@@ -950,8 +965,11 @@
                 fillGrid[instrument] = Array(numSteps).fill(false);
             });
             for (let i = 0; i < numSteps; i++) {
-                const randomInstrument = FILL_INSTRUMENTS[Math.floor(Math.random() * FILL_INSTRUMENTS.length)];
-                fillGrid[randomInstrument][i] = true;
+                // Make fills a bit denser
+                if (Math.random() > 0.4) {
+                    const randomInstrument = FILL_INSTRUMENTS[Math.floor(Math.random() * FILL_INSTRUMENTS.length)];
+                    fillGrid[randomInstrument][i] = true;
+                }
             }
             return fillGrid;
         }
@@ -987,10 +1005,12 @@
                 }
             });
             
+            // Only update the playhead for the main patterns, not for fills.
             if (!isPlayingFill) {
                 setTimeout(() => updatePlayhead(step, activeSequencerId), (time - audioContext.currentTime) * 1000);
             } else {
-                 updatePlayhead(-1, null);
+                 // Clear playhead during fills to avoid confusion.
+                 setTimeout(() => updatePlayhead(-1, null), (time - audioContext.currentTime) * 1000);
             }
         }
 
@@ -1074,7 +1094,11 @@
                      if (!firstSequencerEntry) throw new Error(`The first section "${firstSectionIdentifier}" does not match any existing sequencers.`);
                 } else if (/^[1-9]$/.test(firstSectionIdentifier)) {
                     if (Object.keys(sequencersData).length > 0) {
+                        // If starting with a fill, use the first available sequencer for sounds
                         firstSequencerEntry = Object.entries(sequencersData)[0];
+                        isPlayingFill = true;
+                        fillStepCount = parseInt(firstSectionIdentifier, 10);
+                        currentFillPattern = generateFillPattern(fillStepCount);
                     } else {
                         throw new Error(`Cannot start a song with a fill because no sequencers exist to provide sounds.`);
                     }
@@ -1084,7 +1108,7 @@
                 
                 if (firstSequencerEntry) {
                     currentSongSequencerId = firstSequencerEntry[0];
-                    currentSongSectionIndex = 0; // Corrected from -1 to 0
+                    currentSongSectionIndex = 0;
                     togglePlay(null, true);
                 }
             } catch(error) {
