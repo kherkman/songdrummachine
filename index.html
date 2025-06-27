@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RockForge Drum Sequencer</title>
+    <title>Song Drum Machine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Metal+Mania&family=Orbitron:wght@700&family=Press+Start+2P&family=Roboto&family=Special+Elite&family=VT323&display=swap" rel="stylesheet">
     <style>
         /* --- General & Theming --- */
-        @import url('https://fonts.googleapis.com/css2?family=Metal+Mania&display=swap');
-
         :root {
             --bg-color: #1a1a1a;
             --panel-bg: #2d2d2d;
@@ -32,6 +33,7 @@
             font-family: var(--font-family-body);
             margin: 0;
             padding: 15px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .hidden {
@@ -90,6 +92,7 @@
             width: 80px;
             text-align: center;
             font-size: 1em;
+            font-family: var(--font-family-body);
         }
         
         select {
@@ -103,7 +106,7 @@
             text-transform: uppercase;
         }
         
-        #example-song-select {
+        #example-song-select, #skin-select {
             width: 170px;
         }
 
@@ -164,6 +167,55 @@
             background: linear-gradient(to bottom, #b00, #a00);
         }
 
+        /* --- Global Mix Panel --- */
+        #toggle-mixer-btn {
+            flex-basis: 100%;
+            margin-bottom: 10px;
+            background: #333;
+            border-color: #555;
+        }
+        #global-mix-panel {
+            flex-basis: 100%;
+            background: #222;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .mix-strip {
+            display: grid;
+            grid-template-areas: 
+                "label label"
+                "vol-label pan-label"
+                "volume panning";
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            align-items: center;
+            background: var(--panel-bg);
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .mix-strip .instrument-name {
+            grid-area: label;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 5px;
+            text-transform: capitalize;
+        }
+        .mix-strip label {
+            font-size: 0.8em;
+            text-transform: uppercase;
+            color: #aaa;
+        }
+        .mix-strip .vol-label { grid-area: vol-label; }
+        .mix-strip .pan-label { grid-area: pan-label; }
+        .mix-strip .global-volume-slider { grid-area: volume; width: 100%; margin: 0; }
+        .mix-strip .global-panning-slider { grid-area: panning; width: 100%; margin: 0; }
 
         /* --- Sequencer Container --- */
         .sequencer-container {
@@ -178,6 +230,7 @@
 
         .sequencer-header {
             display: flex;
+            flex-wrap: wrap; /* Changed */
             align-items: center;
             gap: 15px;
             margin-bottom: 15px;
@@ -250,10 +303,6 @@
         .extra-controls {
             display: grid;
             grid-template-areas:
-                "vol-label vol-label"
-                "volume volume"
-                "pan-label pan-label"
-                "panning panning"
                 "vel-btn vel-btn"
                 "rnd-btn clear-btn";
             grid-template-columns: 1fr 1fr;
@@ -263,16 +312,6 @@
             margin-top: 5px;
         }
         
-        .extra-controls label {
-            font-size: 0.8em;
-            text-transform: uppercase;
-            color: #aaa;
-            justify-self: start;
-        }
-        .extra-controls .vol-label { grid-area: vol-label; }
-        .extra-controls .volume-slider { grid-area: volume; width: 100%; margin: 0; }
-        .extra-controls .pan-label { grid-area: pan-label; }
-        .extra-controls .panning-slider { grid-area: panning; width: 100%; margin: 0;}
         .extra-controls .toggle-velocity-btn { grid-area: vel-btn; font-size: 0.8em; padding: 4px; }
         .extra-controls .rnd-row-btn { grid-area: rnd-btn; font-size: 0.8em; padding: 4px;}
         .extra-controls .clear-row-btn { grid-area: clear-btn; font-size: 0.8em; padding: 4px;}
@@ -373,11 +412,23 @@
 <body>
 
     <div id="top-controls">
-        <h1>RockForge Drum Sequencer</h1>
+        <h1>Song Drum Machine</h1>
+
+        <button id="toggle-mixer-btn">Show Volume & Pan</button>
+        <div id="global-mix-panel" class="hidden">
+            <!-- Sliders will be injected here by JS -->
+        </div>
 
         <div class="control-group">
             <label>Master Volume</label>
             <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.8">
+        </div>
+
+        <div class="control-group">
+            <label for="skin-select">Skin</label>
+            <select id="skin-select">
+                <!-- Options will be added by JS -->
+            </select>
         </div>
         
         <div class="control-group">
@@ -416,6 +467,11 @@
                 <button id="song-play-btn" class="play-button">Song Play</button>
                 <button id="export-midi-btn">Export Song MIDI</button>
             </div>
+        </div>
+
+        <div class="control-group">
+            <label>Generate Random Song</label>
+            <button id="random-song-btn" class="primary-action">Generate</button>
         </div>
         
         <div class="control-group">
@@ -457,6 +513,7 @@
         let humanizeAmount = 0;
         let isHumanizeOn = false;
         let sequencersData = {};
+        let skinsData = {};
 
         // --- PLAYBACK SCHEDULING VARIABLES ---
         let schedulerTimerID;
@@ -488,6 +545,23 @@
             'hi-hat-open', 'hi-hat-closed', 'snare', 'kick'
         ];
         const FILL_INSTRUMENTS = ['snare', 'tom1', 'tom2', 'tom3', 'floor-tom'];
+
+        // --- GLOBAL MIXER SETTINGS ---
+        // These are the default volume/pan settings. You can edit them here.
+        const globalMixerSettings = {
+            'crash1': { volume: 0.8, panning: -0.4 },
+            'crash2': { volume: 0.8, panning: 0.4 },
+            'ride': { volume: 0.7, panning: 0.3 },
+            'china': { volume: 0.8, panning: -0.3 },
+            'tom1': { volume: 0.9, panning: -0.2 },
+            'tom2': { volume: 0.9, panning: 0.2 },
+            'tom3': { volume: 0.9, panning: -0.5 },
+            'floor-tom': { volume: 0.9, panning: 0.5 },
+            'hi-hat-open': { volume: 0.6, panning: 0.1 },
+            'hi-hat-closed': { volume: 0.6, panning: 0.1 },
+            'snare': { volume: 1.0, panning: 0 },
+            'kick': { volume: 1.0, panning: 0 }
+        };
         
         const INSTRUMENT_MIDI_NOTES = {
             'kick': 36, 'snare': 38, 'hi-hat-closed': 42, 'hi-hat-open': 46, 'floor-tom': 41, 
@@ -517,6 +591,9 @@
         const midiOutSelect = document.getElementById('midi-out-select');
         const exampleSongSelect = document.getElementById('example-song-select');
         const randomFillsBtn = document.getElementById('random-fills-btn');
+        const toggleMixerBtn = document.getElementById('toggle-mixer-btn');
+        const skinSelect = document.getElementById('skin-select');
+        const randomSongBtn = document.getElementById('random-song-btn');
         
         async function initAudio() {
             if (audioContext) return;
@@ -558,12 +635,57 @@
             }
         }
 
+        async function loadSkins() {
+            try {
+                const response = await fetch('skins.json');
+                if (!response.ok) {
+                    throw new Error(`Could not load skins.json. Status: ${response.status}`);
+                }
+                skinsData = await response.json();
+                console.log('Skins loaded successfully.');
+                populateSkinSelector();
+                // Apply the first skin as default
+                const firstSkinName = Object.keys(skinsData)[0];
+                if (firstSkinName) {
+                    applySkin(skinsData[firstSkinName]);
+                }
+            } catch (error) {
+                console.error("Failed to load skins:", error);
+                // Don't alert, as the default CSS provides a fallback.
+            }
+        }
+
+        function populateSkinSelector() {
+            skinSelect.innerHTML = ''; // Clear existing
+            for (const skinName in skinsData) {
+                const option = document.createElement('option');
+                option.value = skinName;
+                option.textContent = skinName;
+                skinSelect.appendChild(option);
+            }
+        }
+
+        function applySkin(skin) {
+            const root = document.documentElement;
+            for (const [property, value] of Object.entries(skin)) {
+                root.style.setProperty(property, value);
+            }
+        }
+
+        function handleSkinChange(e) {
+            const skinName = e.target.value;
+            const skin = skinsData[skinName];
+            if (skin) {
+                applySkin(skin);
+            }
+        }
+
         function createSequencer(id, name) {
             const sequencerDiv = document.createElement('div');
             sequencerDiv.className = 'sequencer-container';
             sequencerDiv.id = `sequencer-${id}`;
 
-            sequencersData[id] = { name: name, steps: 16, timeSignature: '4/4', grid: {}, volumes: {}, velocities: {}, panning: {} };
+            sequencersData[id] = { name: name, steps: 16, timeSignature: '4/4', grid: {}, velocities: {} };
 
             const header = document.createElement('div');
             header.className = 'sequencer-header';
@@ -652,8 +774,6 @@
             INSTRUMENTS.forEach(instrument => {
                 if (!data.grid[instrument]) data.grid[instrument] = Array(64).fill(false);
                 if (!data.velocities[instrument]) data.velocities[instrument] = Array(64).fill(100);
-                if (data.volumes[instrument] === undefined) data.volumes[instrument] = 0.8;
-                if (data.panning[instrument] === undefined) data.panning[instrument] = 0;
 
                 const row = document.createElement('div');
                 row.className = 'instrument-row';
@@ -666,10 +786,6 @@
                         <button class="toggle-controls-btn">+/-</button>
                     </div>
                     <div class="extra-controls hidden">
-                        <label class="vol-label">Volume</label>
-                        <input type="range" class="volume-slider" data-instrument="${instrument}" data-sequencer-id="${sequencerId}" min="0" max="1" step="0.01" value="${data.volumes[instrument]}">
-                        <label class="pan-label">Pan</label>
-                        <input type="range" class="panning-slider" data-instrument="${instrument}" data-sequencer-id="${sequencerId}" min="-1" max="1" step="0.01" value="${data.panning[instrument]}">
                         <button class="toggle-velocity-btn" data-instrument="${instrument}" data-sequencer-id="${sequencerId}">Velocity</button>
                         <button class="rnd-row-btn" data-instrument="${instrument}" data-sequencer-id="${sequencerId}">RND</button>
                         <button class="clear-row-btn" data-instrument="${instrument}" data-sequencer-id="${sequencerId}">Clear</button>
@@ -740,8 +856,6 @@
             const container = document.getElementById(`sequencer-${sequencerId}`);
             container.querySelectorAll('.step-checkbox').forEach(cb => cb.onchange = handleStepChange);
             container.querySelectorAll('.velocity-slider').forEach(vs => vs.oninput = handleVelocityChange);
-            container.querySelectorAll('.volume-slider').forEach(vs => vs.oninput = handleVolumeChange);
-            container.querySelectorAll('.panning-slider').forEach(ps => ps.oninput = handlePanningChange);
             container.querySelectorAll('.instrument-label').forEach(label => label.onclick = handleLabelClick);
             container.querySelectorAll('.toggle-velocity-btn').forEach(btn => btn.onclick = handleVelocityToggle);
             container.querySelectorAll('.toggle-controls-btn').forEach(btn => btn.onclick = (e) => {
@@ -793,12 +907,10 @@
 
         function handleStepChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].grid[instrument][step] = e.target.checked; }
         function handleVelocityChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].velocities[instrument][step] = parseInt(e.target.value, 10); }
-        function handleVolumeChange(e) { const { instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].volumes[instrument] = parseFloat(e.target.value); }
-        function handlePanningChange(e) { const { instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].panning[instrument] = parseFloat(e.target.value); }
         function handleLabelClick(e) {
             const { instrument, sequencerId } = e.target.dataset;
-            const data = sequencersData[sequencerId];
-            playSample(instrument, data.volumes[instrument], data.panning[instrument]);
+            const settings = globalMixerSettings[instrument];
+            playSample(instrument, settings.volume, settings.panning);
             
             if ((isPlaying || isSongPlaying) && (!isSongPlaying || (isSongPlaying && currentSongSequencerId === sequencerId))) {
                 const stepCheckbox = document.querySelector(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-instrument="${instrument}"][data-step="${currentStep}"]`);
@@ -831,11 +943,9 @@
              updateSequencerGrid(sequencerId, data.steps);
         }
         
-        function handlePatternLoad(e) {
-            const patternName = e.target.value;
-            if (!patternName) return;
+        function applyPatternToSequencer(sequencerId, patternName) {
+            if (!patternName || !RHYTHM_PATTERNS[patternName] || !sequencersData[sequencerId]) return;
 
-            const sequencerId = e.target.dataset.sequencerId;
             const patternData = RHYTHM_PATTERNS[patternName];
             const data = sequencersData[sequencerId];
 
@@ -854,6 +964,7 @@
 
             for (const instrument in patternGrid) {
                 if (INSTRUMENTS.includes(instrument)) {
+                    if (!data.grid[instrument]) data.grid[instrument] = Array(64).fill(false);
                     for (let i = 0; i < newSteps && i < patternGrid[instrument].length; i++) {
                         data.grid[instrument][i] = patternGrid[instrument][i] === 1;
                     }
@@ -861,10 +972,73 @@
             }
             
             updateSequencerGrid(sequencerId, newSteps);
-            
-            e.target.value = ""; 
+        }
+
+        function handlePatternLoad(e) {
+            const patternName = e.target.value;
+            if (!patternName) return;
+            const sequencerId = e.target.dataset.sequencerId;
+            applyPatternToSequencer(sequencerId, patternName);
+            e.target.value = ""; // Reset dropdown after selection
         }
         
+        function generateRandomSong() {
+            stop(); 
+
+            const sequencerIds = Object.keys(sequencersData);
+            const availablePatterns = Object.keys(RHYTHM_PATTERNS);
+
+            if (sequencerIds.length === 0) {
+                alert("Please add at least one sequencer before generating a song.");
+                return;
+            }
+            if (availablePatterns.length === 0) {
+                alert("No rhythm patterns loaded. Cannot generate a random song.");
+                return;
+            }
+
+            // 1. Assign a random pattern to each existing sequencer
+            sequencerIds.forEach(id => {
+                const randomPatternName = availablePatterns[Math.floor(Math.random() * availablePatterns.length)];
+                applyPatternToSequencer(id, randomPatternName);
+            });
+
+            // 2. Generate the song structure
+            let songStructureString = "";
+            const sequencerNames = Object.values(sequencersData).map(data => data.name);
+            const numBlocks = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4 blocks
+            let availableNamesPool = [...sequencerNames];
+            let lastName = null;
+
+            for (let i = 0; i < numBlocks; i++) {
+                if(availableNamesPool.length === 0) {
+                    availableNamesPool = [...sequencerNames]; // Replenish if we run out
+                }
+                
+                let chosenName;
+                let nameIndex;
+                do {
+                    nameIndex = Math.floor(Math.random() * availableNamesPool.length);
+                    chosenName = availableNamesPool[nameIndex];
+                } while (sequencerNames.length > 1 && chosenName === lastName);
+                
+                lastName = chosenName;
+                availableNamesPool.splice(nameIndex, 1); // Remove from pool to avoid immediate reuse
+
+                // Build the block: 4 repeats + a fill
+                songStructureString += chosenName.repeat(4);
+                const randomFillLength = Math.floor(Math.random() * 7) + 2; // Fills of 2-8 steps
+                songStructureString += randomFillLength;
+            }
+
+            // 3. Update the UI
+            songStructureInput.value = songStructureString;
+            
+            // 4. Set a random tempo
+            bpm = Math.floor(Math.random() * 101) + 80; // BPM between 80 and 180
+            tempoInput.value = bpm;
+        }
+
         function playSample(instrument, volume, panning = 0, velocity = 127, time) {
             if (!audioContext || !audioBuffers[instrument]) return;
 
@@ -991,7 +1165,8 @@
             INSTRUMENTS.forEach(instrument => {
                 if (gridToUse && gridToUse[instrument] && gridToUse[instrument][step]) {
                     const velocity = data.velocities[instrument][step];
-                    playSample(instrument, data.volumes[instrument], data.panning[instrument], velocity, time);
+                    const settings = globalMixerSettings[instrument];
+                    playSample(instrument, settings.volume, settings.panning, velocity, time);
                     if (currentMidiOutput && INSTRUMENT_MIDI_NOTES[instrument]) {
                         const note = INSTRUMENT_MIDI_NOTES[instrument];
                         const channel = 9;
@@ -1152,9 +1327,8 @@
             if (command === 144 && velocity > 0) {
                 const instrument = midiNoteToInstrumentMap[note];
                 if (instrument) {
-                    const firstSequencerId = Object.keys(sequencersData)[0];
-                    const volume = firstSequencerId ? sequencersData[firstSequencerId].volumes[instrument] : 0.8;
-                    playSample(instrument, volume, 0, velocity);
+                    const settings = globalMixerSettings[instrument] || { volume: 0.8, panning: 0 };
+                    playSample(instrument, settings.volume, settings.panning, velocity);
                 }
             }
         }
@@ -1217,6 +1391,15 @@
                     data.steps = patternDetails.steps || 16;
                     data.timeSignature = patternDetails.timeSignature || '4/4';
                     
+                    // --- FIX STARTS HERE ---
+                    // Update the header UI to match the loaded song's pattern data.
+                    const header = document.querySelector(`#sequencer-${patternName} .sequencer-header`);
+                    if (header) {
+                        header.querySelector('.steps-input').value = data.steps;
+                        header.querySelector('.time-signature-select').value = data.timeSignature;
+                    }
+                    // --- FIX ENDS HERE ---
+                    
                     const patternGrid = patternDetails.pattern;
                     for (const instrument in patternGrid) {
                         if (INSTRUMENTS.includes(instrument)) {
@@ -1236,7 +1419,41 @@
             e.target.value = "";
         }
 
+        function createGlobalMixerPanel() {
+            const panel = document.getElementById('global-mix-panel');
+            panel.innerHTML = ''; // Clear previous content
+
+            INSTRUMENTS.forEach(instrument => {
+                const settings = globalMixerSettings[instrument];
+                const strip = document.createElement('div');
+                strip.className = 'mix-strip';
+                strip.innerHTML = `
+                    <div class="instrument-name">${instrument.replace(/-/g, ' ')}</div>
+                    <label class="vol-label">Volume</label>
+                    <label class="pan-label">Pan</label>
+                    <input type="range" class="global-volume-slider" data-instrument="${instrument}" min="0" max="1" step="0.01" value="${settings.volume}">
+                    <input type="range" class="global-panning-slider" data-instrument="${instrument}" min="-1" max="1" step="0.01" value="${settings.panning}">
+                `;
+                panel.appendChild(strip);
+            });
+
+            // Add event listeners
+            panel.querySelectorAll('.global-volume-slider').forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const instrument = e.target.dataset.instrument;
+                    globalMixerSettings[instrument].volume = parseFloat(e.target.value);
+                });
+            });
+            panel.querySelectorAll('.global-panning-slider').forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const instrument = e.target.dataset.instrument;
+                    globalMixerSettings[instrument].panning = parseFloat(e.target.value);
+                });
+            });
+        }
+
         // --- INITIALIZATION ---
+        await loadSkins();
         await loadRhythmPatterns();
 
         tempoInput.addEventListener('change', (e) => bpm = parseInt(e.target.value, 10));
@@ -1255,13 +1472,14 @@
             randomFillsBtn.classList.toggle('toggled-on', randomFillsEnabled);
         });
         exportMidiBtn.addEventListener('click', () => {
-            RockForgeExporter.exportSong({
+            SongDrumMachineExporter.exportSong({
                 songStructure: songStructureInput.value,
                 sequencersData: sequencersData,
                 bpm: bpm,
                 INSTRUMENTS: INSTRUMENTS,
                 INSTRUMENT_MIDI_NOTES: INSTRUMENT_MIDI_NOTES,
-                FILL_INSTRUMENTS: FILL_INSTRUMENTS
+                FILL_INSTRUMENTS: FILL_INSTRUMENTS,
+                globalMixerSettings: globalMixerSettings // Pass global settings to exporter
             });
         });
         scanMidiBtn.addEventListener('click', initMidi);
@@ -1272,13 +1490,128 @@
             console.log(currentMidiOutput ? `MIDI Output selected: ${currentMidiOutput.name}` : 'MIDI Output deselected.');
         };
         exampleSongSelect.addEventListener('change', handleLoadExampleSong);
+        toggleMixerBtn.addEventListener('click', () => {
+            const panel = document.getElementById('global-mix-panel');
+            panel.classList.toggle('hidden');
+            toggleMixerBtn.textContent = panel.classList.contains('hidden') ? 'Show Volume & Pan' : 'Hide Volume & Pan';
+        });
+        skinSelect.addEventListener('change', handleSkinChange);
+        randomSongBtn.addEventListener('click', generateRandomSong);
 
+        createGlobalMixerPanel();
         createSequencer('A', 'A');
         await loadExampleSongs();
     });
     </script>
     
-    <script src="midi-exporter.js"></script>
+    <script>
+    // Placeholder for midi-exporter.js logic
+    const SongDrumMachineExporter = (() => {
+        function exportSong(config) {
+            const { songStructure, sequencersData, bpm, INSTRUMENTS, INSTRUMENT_MIDI_NOTES, FILL_INSTRUMENTS, globalMixerSettings } = config;
+            
+            if (!songStructure || Object.keys(sequencersData).length === 0) {
+                alert("Please define a song structure and have at least one sequencer pattern.");
+                return;
+            }
+
+            console.log("Starting MIDI export...");
+
+            const track = new MidiWriter.Track();
+            track.setTempo(bpm);
+            
+            let currentTick = 0;
+            const ticksPerStep = MidiWriter.Writer.prototype.getTickDuration('16'); // Ticks for a 16th note
+
+            const structureArray = [...songStructure];
+
+            structureArray.forEach((sectionIdentifier, index) => {
+                let isFill = /^[1-9]$/.test(sectionIdentifier);
+                let patternData;
+                let grid;
+                let numSteps;
+
+                if (isFill) {
+                    numSteps = parseInt(sectionIdentifier, 10);
+                    // Generate a temporary fill pattern for MIDI export
+                    const fillGrid = {};
+                    INSTRUMENTS.forEach(instrument => fillGrid[instrument] = Array(numSteps).fill(false));
+                    for (let i = 0; i < numSteps; i++) {
+                        if (Math.random() > 0.4) {
+                            const randomInstrument = FILL_INSTRUMENTS[Math.floor(Math.random() * FILL_INSTRUMENTS.length)];
+                            fillGrid[randomInstrument][i] = true;
+                        }
+                    }
+                    grid = fillGrid;
+                } else {
+                    const sequencerEntry = Object.entries(sequencersData).find(([id, data]) => data.name === sectionIdentifier);
+                    if (!sequencerEntry) {
+                        console.warn(`Pattern "${sectionIdentifier}" not found, skipping.`);
+                        return; // continue to next iteration
+                    }
+                    patternData = sequencerEntry[1];
+                    grid = patternData.grid;
+                    numSteps = patternData.steps;
+
+                    // Check if next section is a fill that truncates this pattern
+                    if (index + 1 < structureArray.length) {
+                        const nextIdentifier = structureArray[index + 1];
+                        if (/^[1-9]$/.test(nextIdentifier)) {
+                            const fillLength = parseInt(nextIdentifier, 10);
+                            if (fillLength <= numSteps) {
+                                numSteps -= fillLength;
+                            }
+                        }
+                    }
+                }
+                
+                // Add notes for the current section (pattern or fill)
+                for (let step = 0; step < numSteps; step++) {
+                    const notesForThisStep = [];
+                    INSTRUMENTS.forEach(instrument => {
+                        if (grid[instrument] && grid[instrument][step]) {
+                            const midiNote = INSTRUMENT_MIDI_NOTES[instrument];
+                            if (midiNote) {
+                                let velocity = 100; // default
+                                // If it's a real pattern, get velocity, otherwise use default for fills
+                                if (patternData && patternData.velocities[instrument]) {
+                                    velocity = Math.round((patternData.velocities[instrument][step] / 127) * 100);
+                                }
+                                notesForThisStep.push(new MidiWriter.Note({
+                                    pitch: [midiNote],
+                                    duration: '16',
+                                    startTick: currentTick + (step * ticksPerStep),
+                                    velocity: velocity,
+                                    channel: 10 // GM Drum Channel
+                                }));
+                            }
+                        }
+                    });
+                    if (notesForThisStep.length > 0) {
+                        track.addEvent(notesForThisStep, (event, index) => ({
+                            // This function is just to satisfy the API, we've set startTick already
+                        }));
+                    }
+                }
+                currentTick += numSteps * ticksPerStep;
+            });
+
+            const writer = new MidiWriter.Writer([track]);
+            const dataUri = writer.dataUri();
+            
+            const link = document.createElement('a');
+            link.href = dataUri;
+            link.download = `SongDrumMachine-song-${songStructure.toLowerCase()}-${bpm}bpm.mid`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log("MIDI export finished.");
+        }
+
+        return { exportSong };
+    })();
+    </script>
 
 </body>
 </html>
