@@ -1,0 +1,58 @@
+{
+  "RockForge": {
+    "--bg-color": "#1a1a1a",
+    "--panel-bg": "#2d2d2d",
+    "--border-color": "#444",
+    "--accent-color": "#d44400",
+    "--accent-hover": "#ff6a00",
+    "--text-color": "#e0e0e0",
+    "--font-family-header": "'Metal Mania', cursive",
+    "--font-family-body": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+    "--led-off": "#3a3a3a",
+    "--led-on": "#ff4500",
+    "--led-playhead": "#fffa00",
+    "--danger-color": "#c00"
+  },
+  "Oceanic Deep": {
+    "--bg-color": "#0F1C2E",
+    "--panel-bg": "#1B2A41",
+    "--border-color": "#324A5F",
+    "--accent-color": "#3A86FF",
+    "--accent-hover": "#5aa1ff",
+    "--text-color": "#C3D3E8",
+    "--font-family-header": "'Orbitron', sans-serif",
+    "--font-family-body": "'Roboto', sans-serif",
+    "--led-off": "#324A5F",
+    "--led-on": "#83C9F4",
+    "--led-playhead": "#F0E68C",
+    "--danger-color": "#E53935"
+  },
+  "Vintage Synth": {
+    "--bg-color": "#2E2923",
+    "--panel-bg": "#433E37",
+    "--border-color": "#6D6459",
+    "--accent-color": "#FFA900",
+    "--accent-hover": "#FFC55C",
+    "--text-color": "#EFE6D8",
+    "--font-family-header": "'Press Start 2P', cursive",
+    "--font-family-body": "'VT323', monospace",
+    "--led-off": "#574F44",
+    "--led-on": "#FF5733",
+    "--led-playhead": "#DAF7A6",
+    "--danger-color": "#C70039"
+  },
+  "Forest Grunge": {
+    "--bg-color": "#2C3E2A",
+    "--panel-bg": "#3B5239",
+    "--border-color": "#576B55",
+    "--accent-color": "#A8D08D",
+    "--accent-hover": "#c9e7b2",
+    "--text-color": "#E8F0E5",
+    "--font-family-header": "'Creepster', cursive",
+    "--font-family-body": "'Special Elite', cursive",
+    "--led-off": "#4D634A",
+    "--led-on": "#E9FF70",
+    "--led-playhead": "#FFBF00",
+    "--danger-color": "#9E2B25"
+  }
+}
