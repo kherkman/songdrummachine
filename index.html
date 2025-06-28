@@ -565,6 +565,7 @@
         let schedulerTimerID;
         let nextNoteTime = 0.0;
         const scheduleAheadTime = 0.1;
+        let playbackPhase = 'stopped'; // Can be 'stopped', 'countingIn', or 'song'
 
         // --- SONG MODE STATE ---
         let songStructure = [];
@@ -575,8 +576,6 @@
         let currentFillPattern = null;
         let fillStepCount = 0;
         let isCountInEnabled = false;
-        let countInTimerId = null;
-        let countInRejector = null;
         
         // --- MIDI & EXAMPLE SONG DATA ---
         let midiAccess = null;
@@ -596,7 +595,6 @@
         const FILL_INSTRUMENTS = ['snare', 'tom1', 'tom2', 'tom3', 'floor-tom'];
 
         // --- GLOBAL MIXER SETTINGS ---
-        // These are the default volume/pan settings. You can edit them here.
         const globalMixerSettings = {
             'crash1': { volume: 0.8, panning: -0.4 },
             'crash2': { volume: 0.8, panning: 0.4 },
@@ -1091,7 +1089,7 @@
             tempoInput.value = bpm;
         }
 
-        function playSample(instrument, volume, panning = 0, velocity = 127, scheduledTime, step = -1) {
+        function playSample(instrument, volume, panning = 0, velocity = 127, scheduledTime, step) {
             if (!audioContext || !audioBuffers[instrument]) return;
 
             const source = audioContext.createBufferSource();
@@ -1112,69 +1110,64 @@
 
             source.connect(pannerNode).connect(gainNode).connect(audioContext.destination);
 
-            // --- Timing Calculation ---
             let timeOffset = 0;
-            // Only apply swing/timing randomization if the step is part of a pattern (not a count-in)
-            if (step !== -1) {
-                const sixteenthNoteTime = (60.0 / bpm) / 4.0;
-                // 1. Apply Swing
-                if (swingAmount > 0 && step % 2 !== 0) {
-                    const delay = swingAmount * 2 * sixteenthNoteTime;
-                    timeOffset += delay;
-                }
-                
-                // 2. Apply Random Timing
-                if (isHumanizeOn && timingHumanizeAmount > 0) {
-                    const timingVariation = (Math.random() - 0.5) * (sixteenthNoteTime * 0.5) * timingHumanizeAmount;
-                    timeOffset += timingVariation;
-                }
+            const sixteenthNoteTime = (60.0 / bpm) / 4.0;
+
+            // Apply Swing
+            if (swingAmount > 0 && step % 2 !== 0) {
+                const delay = swingAmount * 2 * sixteenthNoteTime;
+                timeOffset += delay;
+            }
+            
+            // Apply Random Timing
+            if (isHumanizeOn && timingHumanizeAmount > 0) {
+                const timingVariation = (Math.random() - 0.5) * (sixteenthNoteTime * 0.5) * timingHumanizeAmount;
+                timeOffset += timingVariation;
             }
 
             const startTime = (scheduledTime || audioContext.currentTime) + timeOffset;
             source.start(startTime);
         }
 
-        async function performCountIn() {
-            if (!audioContext) await initAudio();
-            if (audioContext.state === 'suspended') await audioContext.resume();
-
-            const beatDuration = 60.0 / bpm; // Time in seconds for one beat (quarter note)
-            const hiHatInstrument = 'hi-hat-closed';
-            const settings = globalMixerSettings[hiHatInstrument];
-
-            songPlayBtn.disabled = true;
-
-            // Schedule 4 hi-hats
-            for (let i = 0; i < 4; i++) {
-                const scheduledTime = audioContext.currentTime + (i * beatDuration);
-                // The -1 for step ensures the count-in is always played straight, without swing or timing randomization
-                playSample(hiHatInstrument, settings.volume, settings.panning, 100, scheduledTime, -1);
-            }
-
-            // Return a promise that resolves after 4 beats, but can be rejected by stop()
-            return new Promise((resolve, reject) => {
-                countInRejector = reject; // Expose reject function globally
-                countInTimerId = setTimeout(() => {
-                    songPlayBtn.disabled = false; // Re-enable button
-                    countInTimerId = null;
-                    countInRejector = null;
-                    resolve();
-                }, beatDuration * 4 * 1000); // Wait for 4 beats
-            });
-        }
-
         function scheduler() { while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) { scheduleNote(currentStep, nextNoteTime); nextNote(); } }
         
         function nextNote() {
             const timePerStep = (60.0 / bpm) / 4.0;
+            const timePerBeat = timePerStep * 4;
+
+            if (playbackPhase === 'countingIn') {
+                nextNoteTime += timePerBeat; // Count-in happens on the beat
+                currentStep++;
+                if (currentStep >= 4) {
+                    // Transition to song
+                    playbackPhase = 'song';
+                    currentStep = 0; // Reset for the first pattern
+                    // Set up the first section of the song
+                    currentSongSectionIndex = 0;
+                    isPlayingFill = false;
+                    const firstIdentifier = songStructure[0];
+                    if (randomFillsEnabled && /^[1-9]$/.test(firstIdentifier)) {
+                        isPlayingFill = true;
+                        fillStepCount = parseInt(firstIdentifier, 10);
+                        currentFillPattern = generateFillPattern(fillStepCount);
+                        // Use the first available sequencer for sounds
+                        currentSongSequencerId = Object.keys(sequencersData)[0];
+                    } else {
+                        const firstSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === firstIdentifier);
+                        currentSongSequencerId = firstSequencer[0];
+                    }
+                }
+                return; // End the function here for this tick.
+            }
+
+            // --- Regular Song/Pattern Logic ---
             nextNoteTime += timePerStep;
 
-            // This block determines the length of the currently playing segment.
             let numSteps;
             if (isSongPlaying) {
                 if (isPlayingFill) {
                     numSteps = fillStepCount;
-                } else { // We are playing a pattern
+                } else {
                     const patternData = sequencersData[currentSongSequencerId];
                     if (!patternData) { stop(); return; }
                     
@@ -1185,25 +1178,22 @@
                         if (randomFillsEnabled && /^[1-9]$/.test(nextIdentifier)) {
                             const fillLength = parseInt(nextIdentifier, 10);
                             if (fillLength <= numSteps) {
-                                numSteps -= fillLength; // Truncate the pattern's length.
+                                numSteps -= fillLength;
                             }
                         }
                     }
                 }
-            } else { // Single pattern playback mode (unchanged)
+            } else {
                 const activeId = document.querySelector('.play-button.playing')?.dataset.sequencerId;
                 if (!activeId || !sequencersData[activeId]) { stop(); return; }
                 numSteps = sequencersData[activeId].steps;
             }
 
-            // Advance the step and check if the current segment has finished.
             currentStep++;
             if (currentStep >= numSteps) {
                 currentStep = 0;
 
-                // If in song mode, transition to the next section.
                 if (isSongPlaying) {
-                    // The previous segment is done, so we always advance in the song structure.
                     currentSongSectionIndex++;
                     if (currentSongSectionIndex >= songStructure.length) {
                         currentSongSectionIndex = 0; // Loop song.
@@ -1211,14 +1201,11 @@
 
                     const newIdentifier = songStructure[currentSongSectionIndex];
 
-                    // Is the new section a fill? This handles both appended and standalone fills.
                     if (randomFillsEnabled && /^[1-9]$/.test(newIdentifier)) {
                         isPlayingFill = true;
                         fillStepCount = parseInt(newIdentifier, 10);
                         currentFillPattern = generateFillPattern(fillStepCount);
-                        // We keep the `currentSongSequencerId` from the previous pattern for sounds.
                     } 
-                    // Is the new section a pattern?
                     else {
                         isPlayingFill = false;
                         const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === newIdentifier);
@@ -1240,7 +1227,6 @@
                 fillGrid[instrument] = Array(numSteps).fill(false);
             });
             for (let i = 0; i < numSteps; i++) {
-                // Make fills a bit denser
                 if (Math.random() > 0.4) {
                     const randomInstrument = FILL_INSTRUMENTS[Math.floor(Math.random() * FILL_INSTRUMENTS.length)];
                     fillGrid[randomInstrument][i] = true;
@@ -1250,6 +1236,15 @@
         }
 
         function scheduleNote(step, time) {
+            if (playbackPhase === 'countingIn') {
+                const hiHatInstrument = 'hi-hat-closed';
+                const settings = globalMixerSettings[hiHatInstrument];
+                // Play a simple, un-randomized hi-hat
+                playSample(hiHatInstrument, settings.volume, settings.panning, 100, time, -1);
+                return;
+            }
+
+            // --- Regular song scheduling ---
             let activeSequencerId;
             if (isSongPlaying) {
                 activeSequencerId = currentSongSequencerId;
@@ -1281,11 +1276,9 @@
                 }
             });
             
-            // Only update the playhead for the main patterns, not for fills.
             if (!isPlayingFill) {
                 setTimeout(() => updatePlayhead(step, activeSequencerId), (time - audioContext.currentTime) * 1000);
             } else {
-                 // Clear playhead during fills to avoid confusion.
                  setTimeout(() => updatePlayhead(-1, null), (time - audioContext.currentTime) * 1000);
             }
         }
@@ -1315,31 +1308,23 @@
                  }
                  return;
              }
-             
-             // If starting song mode and count-in is enabled, perform it first.
-             if (isSongMode && isCountInEnabled) {
-                try {
-                    await performCountIn();
-                } catch (e) {
-                    console.log(e.message); // Logs "Playback stopped during count-in."
-                    return; // Abort starting playback if it was cancelled.
-                }
-             }
 
              if (audioContext.state === 'suspended') await audioContext.resume();
              
              isPlaying = true;
              isSongPlaying = isSongMode;
-
+             
              if (isSongMode) {
+                 playbackPhase = isCountInEnabled ? 'countingIn' : 'song';
                  songPlayBtn.classList.add('playing');
                  songPlayBtn.textContent = 'Song Stop';
              } else {
+                 playbackPhase = 'song'; // No count-in for single pattern play
                  const playBtn = document.querySelector(`.play-button[data-sequencer-id="${sequencerId}"]`);
                  if (playBtn) { playBtn.classList.add('playing'); playBtn.textContent = 'Stop'; }
              }
              
-             currentStep = -1;
+             currentStep = (playbackPhase === 'countingIn') ? -1 : -1; // Always start at -1 so first increment is 0
              nextNoteTime = audioContext.currentTime;
              schedulerTimerID = setInterval(scheduler, 25.0);
         }
@@ -1348,19 +1333,9 @@
             isPlaying = false; 
             isSongPlaying = false;
             isPlayingFill = false;
+            playbackPhase = 'stopped';
             currentFillPattern = null;
             clearInterval(schedulerTimerID);
-            
-            // --- Cancel count-in if it's running ---
-            if (countInTimerId) {
-                clearTimeout(countInTimerId);
-                countInTimerId = null;
-            }
-            if (countInRejector) {
-                countInRejector(new Error("Playback stopped during count-in."));
-                countInRejector = null;
-            }
-            songPlayBtn.disabled = false; // Ensure button is always re-enabled on stop
             
             document.querySelectorAll('.play-button').forEach(b => { 
                 b.classList.remove('playing');
@@ -1381,7 +1356,6 @@
                 const structureStr = songStructureInput.value;
                 if(!structureStr) { alert('Please enter a song structure (e.g., AB1AB2C).'); return; }
 
-                const availableNames = Object.values(sequencersData).map(d => d.name);
                 songStructure = [...structureStr];
                 
                 const firstSectionIdentifier = songStructure[0];
@@ -1392,11 +1366,7 @@
                      if (!firstSequencerEntry) throw new Error(`The first section "${firstSectionIdentifier}" does not match any existing sequencers.`);
                 } else if (/^[1-9]$/.test(firstSectionIdentifier)) {
                     if (Object.keys(sequencersData).length > 0) {
-                        // If starting with a fill, use the first available sequencer for sounds
                         firstSequencerEntry = Object.entries(sequencersData)[0];
-                        isPlayingFill = true;
-                        fillStepCount = parseInt(firstSectionIdentifier, 10);
-                        currentFillPattern = generateFillPattern(fillStepCount);
                     } else {
                         throw new Error(`Cannot start a song with a fill because no sequencers exist to provide sounds.`);
                     }
@@ -1405,8 +1375,7 @@
                 }
                 
                 if (firstSequencerEntry) {
-                    currentSongSequencerId = firstSequencerEntry[0];
-                    currentSongSectionIndex = 0;
+                    currentSongSequencerId = firstSequencerEntry[0]; // Set initial sequencer for reference
                     togglePlay(null, true);
                 }
             } catch(error) {
@@ -1451,7 +1420,7 @@
                 const instrument = midiNoteToInstrumentMap[note];
                 if (instrument) {
                     const settings = globalMixerSettings[instrument] || { volume: 0.8, panning: 0 };
-                    playSample(instrument, settings.volume, settings.panning, velocity);
+                    playSample(instrument, settings.volume, settings.panning, velocity, audioContext.currentTime, -1);
                 }
             }
         }
