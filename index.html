@@ -1138,7 +1138,7 @@
             if (playbackPhase === 'countingIn') {
                 nextNoteTime += timePerBeat; // Count-in happens on the beat
                 currentStep++;
-                if (currentStep >= 4) {
+                if (currentStep > 4) {
                     // Transition to song
                     playbackPhase = 'song';
                     currentStep = 0; // Reset for the first pattern
