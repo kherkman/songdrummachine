@@ -1,132 +1,156 @@
-const RockForgeExporter = {
-    /**
-     * Generates a random fill pattern.
-     * @param {number} numSteps - The number of steps in the fill.
-     * @param {string[]} fillInstruments - An array of instrument names to use for the fill.
-     * @returns {object} A grid-like object representing the fill pattern.
-     */
-    _generateFillPattern: function(numSteps, fillInstruments) {
-        const fillGrid = {};
-        // Initialize grid for all possible instruments.
-        const allInstruments = [
-            'crash1', 'crash2', 'ride', 'china',
-            'tom1', 'tom2', 'tom3', 'floor-tom',
-            'hi-hat-open', 'hi-hat-closed', 'snare', 'kick'
-        ];
-        allInstruments.forEach(instrument => {
-            fillGrid[instrument] = Array(numSteps).fill(false);
-        });
+// midi-exporter.js
 
-        for (let i = 0; i < numSteps; i++) {
-            const randomInstrument = fillInstruments[Math.floor(Math.random() * fillInstruments.length)];
-            fillGrid[randomInstrument][i] = true;
-        }
-        return fillGrid;
-    },
+const SongDrumMachineExporter = (() => {
 
     /**
-     * Exports a song to a .mid file.
-     * @param {object} params - The parameters for the export.
-     * @param {string} params.songStructure - The string defining the song arrangement (e.g., "AB1C").
-     * @param {object} params.sequencersData - The main data object for all sequencers.
-     * @param {number} params.bpm - The tempo of the song in beats per minute.
-     * @param {string[]} params.INSTRUMENTS - Array of all instrument names.
-     * @param {object} params.INSTRUMENT_MIDI_NOTES - Mapping of instrument names to MIDI note numbers.
-     * @param {string[]} params.FILL_INSTRUMENTS - Array of instrument names to use for fills.
+     * Exports the entire song structure to a downloadable MIDI file.
+     * @param {object} config - The configuration object for the song.
+     * @param {string} config.songStructure - The string defining the song sequence (e.g., "AB1A").
+     * @param {object} config.sequencersData - The main object containing all sequencer patterns.
+     * @param {number} config.bpm - The song's beats per minute.
+     * @param {string[]} config.INSTRUMENTS - Array of instrument names.
+     * @param {object} config.INSTRUMENT_MIDI_NOTES - Mapping of instrument names to MIDI note numbers.
+     * @param {string[]} config.FILL_INSTRUMENTS - Array of instruments used for random fills.
+     * @param {boolean} config.isHumanizeOn - Whether the random humanization is active.
+     * @param {number} config.swingAmount - The swing factor (0 to 0.25).
+     * @param {number} config.timingHumanizeAmount - The timing randomness factor (0 to 1).
+     * @param {number} config.velocityHumanizeAmount - The velocity randomness factor (0 to 1).
      */
-    exportSong: function({ songStructure, sequencersData, bpm, INSTRUMENTS, INSTRUMENT_MIDI_NOTES, FILL_INSTRUMENTS }) {
-        if (typeof window.MidiWriter === 'undefined') {
-            alert('MIDI library is not ready yet.');
-            console.error('MidiWriter object not found on window.');
+    function exportSong(config) {
+        const {
+            songStructure,
+            sequencersData,
+            bpm,
+            INSTRUMENTS,
+            INSTRUMENT_MIDI_NOTES,
+            FILL_INSTRUMENTS,
+            isHumanizeOn,
+            swingAmount,
+            timingHumanizeAmount,
+            velocityHumanizeAmount
+        } = config;
+
+        if (!songStructure || Object.keys(sequencersData).length === 0) {
+            alert("Please define a song structure and have at least one sequencer pattern.");
             return;
         }
 
-        try {
-            if (!songStructure) {
-                alert('Please enter a song structure to export.');
-                return;
-            }
-            
-            const songItems = [...songStructure];
-            const track = new window.MidiWriter.Track();
-            track.setTempo(bpm);
-            track.addEvent(new window.MidiWriter.ProgramChangeEvent({instrument: 1, channel: 10}));
+        console.log("Starting MIDI export with humanization...");
 
-            let totalTicks = 0;
-            const ticksPerStep = 128;
+        const track = new MidiWriter.Track();
+        track.setTempo(bpm);
+        // Ensure channel 10 is set to a percussion map (instrument 1 is arbitrary for channel 10)
+        track.addEvent(new MidiWriter.ProgramChangeEvent({ instrument: 1, channel: 10 }));
 
-            // ADDED: Variable to track the last used sequencer for fill sounds
-            let lastValidSequencerId = null;
+        const ticksPerStep = MidiWriter.Writer.prototype.getTickDuration('16');
+        let currentTick = 0;
+        const structureArray = [...songStructure];
 
-            songItems.forEach(item => {
-                let gridToUse, numSteps, currentSequencerData;
+        structureArray.forEach((sectionIdentifier, index) => {
+            let isFill = /^[1-9]$/.test(sectionIdentifier);
+            let patternData;
+            let grid;
+            let numSteps;
 
-                if (/^[A-Z]$/.test(item)) {
-                    const sequencerId = Object.keys(sequencersData).find(key => sequencersData[key].name === item);
-                    if (!sequencerId) {
-                        console.warn(`Skipping unknown section "${item}" in MIDI export.`);
-                        return; // continue forEach
+            if (isFill) {
+                numSteps = parseInt(sectionIdentifier, 10);
+                const fillGrid = {};
+                INSTRUMENTS.forEach(instrument => fillGrid[instrument] = Array(numSteps).fill(false));
+                for (let i = 0; i < numSteps; i++) {
+                    if (Math.random() > 0.4) {
+                        const randomInstrument = FILL_INSTRUMENTS[Math.floor(Math.random() * FILL_INSTRUMENTS.length)];
+                        fillGrid[randomInstrument][i] = true;
                     }
-                    // ADDED: Track this sequencer as the last valid one
-                    lastValidSequencerId = sequencerId;
-
-                    currentSequencerData = sequencersData[sequencerId];
-                    gridToUse = currentSequencerData.grid;
-                    numSteps = currentSequencerData.steps;
-
-                } else if (/^[1-9]$/.test(item)) {
-                    numSteps = parseInt(item, 10);
-                    gridToUse = this._generateFillPattern(numSteps, FILL_INSTRUMENTS);
-                    
-                    // --- CHANGED: This block is the core of the fix ---
-                    // Use the last tracked sequencer ID. If none exists (e.g., song starts with a fill),
-                    // fall back to the first available sequencer.
-                    const sequencerIdForFillSounds = lastValidSequencerId || Object.keys(sequencersData)[0];
-
-                    if (!sequencerIdForFillSounds) {
-                        console.warn(`Skipping fill section in MIDI export because no preceding section or default sequencer exists.`);
-                        return; // continue forEach
-                    }
-                    currentSequencerData = sequencersData[sequencerIdForFillSounds];
-                    // --- END OF CHANGE ---
-
-                } else {
-                    return; // Skip invalid items
                 }
+                grid = fillGrid;
+            } else {
+                const sequencerEntry = Object.entries(sequencersData).find(([id, data]) => data.name === sectionIdentifier);
+                if (!sequencerEntry) {
+                    console.warn(`Pattern "${sectionIdentifier}" not found, skipping.`);
+                    return;
+                }
+                patternData = sequencerEntry[1];
+                grid = patternData.grid;
+                numSteps = patternData.steps;
 
-                for (let step = 0; step < numSteps; step++) {
-                    const notesForThisStep = [];
-                    INSTRUMENTS.forEach(instrument => {
-                        // Ensure the instrument exists in the grid (important for fills)
-                        if (gridToUse[instrument] && gridToUse[instrument][step] && INSTRUMENT_MIDI_NOTES[instrument]) {
-                            notesForThisStep.push(new window.MidiWriter.NoteEvent({ 
-                                pitch: [INSTRUMENT_MIDI_NOTES[instrument]], 
-                                duration: '16', 
-                                // Use the correct sequencer's velocity data
-                                velocity: Math.round(currentSequencerData.velocities[instrument][step] / 127 * 100), 
-                                startTick: totalTicks + (step * ticksPerStep), 
-                                channel: 10 
-                            }));
+                if (index + 1 < structureArray.length) {
+                    const nextIdentifier = structureArray[index + 1];
+                    if (/^[1-9]$/.test(nextIdentifier)) {
+                        const fillLength = parseInt(nextIdentifier, 10);
+                        if (fillLength <= numSteps) {
+                            numSteps -= fillLength;
                         }
-                    });
-                    if (notesForThisStep.length > 0) {
-                        track.addEvent(notesForThisStep, () => ({ sequential: false }));
                     }
                 }
-                totalTicks += numSteps * ticksPerStep;
-            });
+            }
 
-            const writer = new window.MidiWriter.Writer([track]);
-            const link = document.createElement('a');
-            link.href = writer.dataUri();
-            link.download = "rockforge_song.mid";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            for (let step = 0; step < numSteps; step++) {
+                const notesForThisStep = [];
+                INSTRUMENTS.forEach(instrument => {
+                    if (grid[instrument] && grid[instrument][step]) {
+                        const midiNote = INSTRUMENT_MIDI_NOTES[instrument];
+                        if (!midiNote) return;
 
-        } catch(error) {
-            console.error("Error exporting MIDI:", error);
-            alert("An error occurred during MIDI export: " + error.message);
-        }
+                        let baseVelocity = 100;
+                        if (patternData && patternData.velocities[instrument]) {
+                            baseVelocity = Math.round((patternData.velocities[instrument][step] / 127) * 100);
+                        }
+
+                        // --- Apply Humanization & Swing ---
+                        let finalVelocity = baseVelocity;
+                        let tickOffset = 0;
+
+                        if (isHumanizeOn) {
+                            // Velocity Randomness
+                            if (velocityHumanizeAmount > 0) {
+                                const velocityVariation = Math.round(((Math.random() - 0.5) * 2) * 20 * velocityHumanizeAmount);
+                                finalVelocity += velocityVariation;
+                            }
+                            // Timing Randomness
+                            if (timingHumanizeAmount > 0) {
+                                const timingVariation = Math.round(((Math.random() - 0.5) * 2) * (ticksPerStep * 0.25) * timingHumanizeAmount);
+                                tickOffset += timingVariation;
+                            }
+                        }
+
+                        // Swing (applied regardless of the humanize on/off button)
+                        if (swingAmount > 0 && step % 2 !== 0) {
+                            const swingDelay = Math.round(swingAmount * 2 * ticksPerStep);
+                            tickOffset += swingDelay;
+                        }
+
+                        finalVelocity = Math.max(1, Math.min(100, finalVelocity));
+                        const startTick = currentTick + (step * ticksPerStep) + tickOffset;
+
+                        notesForThisStep.push(new MidiWriter.Note({
+                            pitch: [midiNote],
+                            duration: '16',
+                            startTick: startTick,
+                            velocity: finalVelocity,
+                            channel: 10
+                        }));
+                    }
+                });
+
+                if (notesForThisStep.length > 0) {
+                    track.addEvent(notesForThisStep);
+                }
+            }
+            currentTick += numSteps * ticksPerStep;
+        });
+
+        const writer = new MidiWriter.Writer([track]);
+        const dataUri = writer.dataUri();
+
+        const link = document.createElement('a');
+        link.href = dataUri;
+        link.download = `SongDrumMachine-${songStructure.toLowerCase()}-${bpm}bpm.mid`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log("MIDI export finished.");
     }
-};
+
+    return { exportSong };
+})();
