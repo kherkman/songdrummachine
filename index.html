@@ -960,7 +960,7 @@
         function handleLabelClick(e) {
             const { instrument, sequencerId } = e.target.dataset;
             const settings = globalMixerSettings[instrument];
-            playSample(instrument, settings.volume, settings.panning);
+            playSample(instrument, settings.volume, settings.panning, 127, audioContext.currentTime, -1);
             
             if ((isPlaying || isSongPlaying) && (!isSongPlaying || (isSongPlaying && currentSongSequencerId === sequencerId))) {
                 const stepCheckbox = document.querySelector(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-instrument="${instrument}"][data-step="${currentStep}"]`);
@@ -1111,18 +1111,20 @@
             source.connect(pannerNode).connect(gainNode).connect(audioContext.destination);
 
             let timeOffset = 0;
-            const sixteenthNoteTime = (60.0 / bpm) / 4.0;
-
-            // Apply Swing
-            if (swingAmount > 0 && step % 2 !== 0) {
-                const delay = swingAmount * 2 * sixteenthNoteTime;
-                timeOffset += delay;
-            }
-            
-            // Apply Random Timing
-            if (isHumanizeOn && timingHumanizeAmount > 0) {
-                const timingVariation = (Math.random() - 0.5) * (sixteenthNoteTime * 0.5) * timingHumanizeAmount;
-                timeOffset += timingVariation;
+            // Only apply swing/timing randomization if the step is part of a pattern (not a count-in or manual trigger)
+            if (step >= 0) {
+                const sixteenthNoteTime = (60.0 / bpm) / 4.0;
+                // Apply Swing
+                if (swingAmount > 0 && step % 2 !== 0) {
+                    const delay = swingAmount * 2 * sixteenthNoteTime;
+                    timeOffset += delay;
+                }
+                
+                // Apply Random Timing
+                if (isHumanizeOn && timingHumanizeAmount > 0) {
+                    const timingVariation = (Math.random() - 0.5) * (sixteenthNoteTime * 0.5) * timingHumanizeAmount;
+                    timeOffset += timingVariation;
+                }
             }
 
             const startTime = (scheduledTime || audioContext.currentTime) + timeOffset;
@@ -1136,28 +1138,26 @@
             const timePerBeat = timePerStep * 4;
 
             if (playbackPhase === 'countingIn') {
-                nextNoteTime += timePerBeat; // Count-in happens on the beat
+                nextNoteTime += timePerBeat;
                 currentStep++;
-                if (currentStep > 4) {
-                    // Transition to song
+
+                if (currentStep >= 4) {
                     playbackPhase = 'song';
-                    currentStep = 0; // Reset for the first pattern
-                    // Set up the first section of the song
-                    currentSongSectionIndex = 0;
-                    isPlayingFill = false;
+                    currentStep = 0;
+                    
                     const firstIdentifier = songStructure[0];
                     if (randomFillsEnabled && /^[1-9]$/.test(firstIdentifier)) {
                         isPlayingFill = true;
                         fillStepCount = parseInt(firstIdentifier, 10);
                         currentFillPattern = generateFillPattern(fillStepCount);
-                        // Use the first available sequencer for sounds
                         currentSongSequencerId = Object.keys(sequencersData)[0];
                     } else {
+                        isPlayingFill = false;
                         const firstSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === firstIdentifier);
                         currentSongSequencerId = firstSequencer[0];
                     }
                 }
-                return; // End the function here for this tick.
+                return;
             }
 
             // --- Regular Song/Pattern Logic ---
@@ -1237,9 +1237,14 @@
 
         function scheduleNote(step, time) {
             if (playbackPhase === 'countingIn') {
+                // --- FIX STARTS HERE ---
+                // Only play for the four beats of the count-in (steps 0, 1, 2, 3).
+                // This prevents the initial call with step=-1 from playing a sound.
+                if (step < 0) return;
+                // --- FIX ENDS HERE ---
+                
                 const hiHatInstrument = 'hi-hat-closed';
                 const settings = globalMixerSettings[hiHatInstrument];
-                // Play a simple, un-randomized hi-hat
                 playSample(hiHatInstrument, settings.volume, settings.panning, 100, time, -1);
                 return;
             }
@@ -1324,7 +1329,7 @@
                  if (playBtn) { playBtn.classList.add('playing'); playBtn.textContent = 'Stop'; }
              }
              
-             currentStep = (playbackPhase === 'countingIn') ? -1 : -1; // Always start at -1 so first increment is 0
+             currentStep = -1; // Always start at -1 so first increment is 0
              nextNoteTime = audioContext.currentTime;
              schedulerTimerID = setInterval(scheduler, 25.0);
         }
