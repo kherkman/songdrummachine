@@ -134,6 +134,11 @@
             border-style: inset;
         }
         
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
         button.play-button.playing, button.toggled-on {
             background: linear-gradient(to bottom, #00b33c, #008a2e);
             color: white;
@@ -512,6 +517,11 @@
         </div>
 
         <div class="control-group">
+            <label>Count In</label>
+            <button id="count-in-btn">Count In OFF</button>
+        </div>
+
+        <div class="control-group">
             <label for="example-song-select">Load Example Song</label>
             <select id="example-song-select">
                 <option value="">-- Select Song --</option>
@@ -564,6 +574,9 @@
         let isPlayingFill = false;
         let currentFillPattern = null;
         let fillStepCount = 0;
+        let isCountInEnabled = false;
+        let countInTimerId = null;
+        let countInRejector = null;
         
         // --- MIDI & EXAMPLE SONG DATA ---
         let midiAccess = null;
@@ -629,6 +642,7 @@
         const midiOutSelect = document.getElementById('midi-out-select');
         const exampleSongSelect = document.getElementById('example-song-select');
         const randomFillsBtn = document.getElementById('random-fills-btn');
+        const countInBtn = document.getElementById('count-in-btn');
         const toggleMixerBtn = document.getElementById('toggle-mixer-btn');
         const skinSelect = document.getElementById('skin-select');
         const randomSongBtn = document.getElementById('random-song-btn');
@@ -1091,7 +1105,6 @@
 
             // Apply Velocity Humanization
             if (isHumanizeOn && velocityHumanizeAmount > 0) {
-                // Vary velocity by up to +/- 20% of full scale, scaled by the slider
                 const velocityVariation = ((Math.random() - 0.5) * 2 * 0.2 * velocityHumanizeAmount);
                 finalVolume = Math.max(0, finalVolume + velocityVariation);
             }
@@ -1101,24 +1114,53 @@
 
             // --- Timing Calculation ---
             let timeOffset = 0;
-            const sixteenthNoteTime = (60.0 / bpm) / 4.0;
-
-            // 1. Apply Swing
-            // Swing delays every second 16th note, creating a shuffle feel.
-            if (step !== -1 && swingAmount > 0 && step % 2 !== 0) {
-                const delay = swingAmount * 2 * sixteenthNoteTime;
-                timeOffset += delay;
-            }
-            
-            // 2. Apply Random Timing
-            if (isHumanizeOn && timingHumanizeAmount > 0) {
-                // Jitter timing by up to +/- 25% of a 16th note, scaled by the slider
-                const timingVariation = (Math.random() - 0.5) * (sixteenthNoteTime * 0.5) * timingHumanizeAmount;
-                timeOffset += timingVariation;
+            // Only apply swing/timing randomization if the step is part of a pattern (not a count-in)
+            if (step !== -1) {
+                const sixteenthNoteTime = (60.0 / bpm) / 4.0;
+                // 1. Apply Swing
+                if (swingAmount > 0 && step % 2 !== 0) {
+                    const delay = swingAmount * 2 * sixteenthNoteTime;
+                    timeOffset += delay;
+                }
+                
+                // 2. Apply Random Timing
+                if (isHumanizeOn && timingHumanizeAmount > 0) {
+                    const timingVariation = (Math.random() - 0.5) * (sixteenthNoteTime * 0.5) * timingHumanizeAmount;
+                    timeOffset += timingVariation;
+                }
             }
 
             const startTime = (scheduledTime || audioContext.currentTime) + timeOffset;
             source.start(startTime);
+        }
+
+        async function performCountIn() {
+            if (!audioContext) await initAudio();
+            if (audioContext.state === 'suspended') await audioContext.resume();
+
+            const beatDuration = 60.0 / bpm; // Time in seconds for one beat (quarter note)
+            const hiHatInstrument = 'hi-hat-closed';
+            const settings = globalMixerSettings[hiHatInstrument];
+
+            songPlayBtn.disabled = true;
+
+            // Schedule 4 hi-hats
+            for (let i = 0; i < 4; i++) {
+                const scheduledTime = audioContext.currentTime + (i * beatDuration);
+                // The -1 for step ensures the count-in is always played straight, without swing or timing randomization
+                playSample(hiHatInstrument, settings.volume, settings.panning, 100, scheduledTime, -1);
+            }
+
+            // Return a promise that resolves after 4 beats, but can be rejected by stop()
+            return new Promise((resolve, reject) => {
+                countInRejector = reject; // Expose reject function globally
+                countInTimerId = setTimeout(() => {
+                    songPlayBtn.disabled = false; // Re-enable button
+                    countInTimerId = null;
+                    countInRejector = null;
+                    resolve();
+                }, beatDuration * 4 * 1000); // Wait for 4 beats
+            });
         }
 
         function scheduler() { while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) { scheduleNote(currentStep, nextNoteTime); nextNote(); } }
@@ -1138,8 +1180,6 @@
                     
                     numSteps = patternData.steps;
 
-                    // Look ahead to see if the next section is a fill that will cut this pattern short.
-                    // This handles the "If fill length <= previous rhythm length, reduce..." part.
                     if (currentSongSectionIndex + 1 < songStructure.length) {
                         const nextIdentifier = songStructure[currentSongSectionIndex + 1];
                         if (randomFillsEnabled && /^[1-9]$/.test(nextIdentifier)) {
@@ -1275,6 +1315,16 @@
                  }
                  return;
              }
+             
+             // If starting song mode and count-in is enabled, perform it first.
+             if (isSongMode && isCountInEnabled) {
+                try {
+                    await performCountIn();
+                } catch (e) {
+                    console.log(e.message); // Logs "Playback stopped during count-in."
+                    return; // Abort starting playback if it was cancelled.
+                }
+             }
 
              if (audioContext.state === 'suspended') await audioContext.resume();
              
@@ -1300,6 +1350,18 @@
             isPlayingFill = false;
             currentFillPattern = null;
             clearInterval(schedulerTimerID);
+            
+            // --- Cancel count-in if it's running ---
+            if (countInTimerId) {
+                clearTimeout(countInTimerId);
+                countInTimerId = null;
+            }
+            if (countInRejector) {
+                countInRejector(new Error("Playback stopped during count-in."));
+                countInRejector = null;
+            }
+            songPlayBtn.disabled = false; // Ensure button is always re-enabled on stop
+            
             document.querySelectorAll('.play-button').forEach(b => { 
                 b.classList.remove('playing');
                 if(b.id === 'song-play-btn') b.textContent = 'Song Play';
@@ -1452,14 +1514,11 @@
                     data.steps = patternDetails.steps || 16;
                     data.timeSignature = patternDetails.timeSignature || '4/4';
                     
-                    // --- FIX STARTS HERE ---
-                    // Update the header UI to match the loaded song's pattern data.
                     const header = document.querySelector(`#sequencer-${patternName} .sequencer-header`);
                     if (header) {
                         header.querySelector('.steps-input').value = data.steps;
                         header.querySelector('.time-signature-select').value = data.timeSignature;
                     }
-                    // --- FIX ENDS HERE ---
                     
                     const patternGrid = patternDetails.pattern;
                     for (const instrument in patternGrid) {
@@ -1543,6 +1602,11 @@
             randomFillsEnabled = !randomFillsEnabled;
             randomFillsBtn.textContent = randomFillsEnabled ? "Fills ON" : "Fills OFF";
             randomFillsBtn.classList.toggle('toggled-on', randomFillsEnabled);
+        });
+        countInBtn.addEventListener('click', () => {
+            isCountInEnabled = !isCountInEnabled;
+            countInBtn.textContent = isCountInEnabled ? "Count In ON" : "Count In OFF";
+            countInBtn.classList.toggle('toggled-on', isCountInEnabled);
         });
         exportMidiBtn.addEventListener('click', () => {
             SongDrumMachineExporter.exportSong({
