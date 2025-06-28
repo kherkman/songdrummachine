@@ -505,6 +505,22 @@
                 <button id="export-midi-btn">Export Song MIDI</button>
             </div>
         </div>
+        
+        <div class="control-group">
+            <label>Song File</label>
+            <div style="display:flex; gap: 5px;">
+                <button id="import-song-btn">Import Song</button>
+                <button id="export-song-btn">Export Song</button>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Session File</label>
+            <div style="display:flex; gap: 5px;">
+                <button id="load-session-btn">Load Session</button>
+                <button id="save-session-btn">Save Session</button>
+            </div>
+        </div>
 
         <div class="control-group">
             <label>Generate Random Song</label>
@@ -593,9 +609,11 @@
             'hi-hat-open', 'hi-hat-closed', 'snare', 'kick'
         ];
         const FILL_INSTRUMENTS = ['snare', 'tom1', 'tom2', 'tom3', 'floor-tom'];
+        const VALID_TIME_SIGNATURES = ['4/4', '3/4', '6/8', '12/8', '2/4', '5/4', '5/8', '7/8'];
+
 
         // --- GLOBAL MIXER SETTINGS ---
-        const globalMixerSettings = {
+        let globalMixerSettings = {
             'crash1': { volume: 0.8, panning: -0.4 },
             'crash2': { volume: 0.8, panning: 0.4 },
             'ride': { volume: 0.7, panning: 0.3 },
@@ -644,6 +662,10 @@
         const toggleMixerBtn = document.getElementById('toggle-mixer-btn');
         const skinSelect = document.getElementById('skin-select');
         const randomSongBtn = document.getElementById('random-song-btn');
+        const exportSongBtn = document.getElementById('export-song-btn');
+        const importSongBtn = document.getElementById('import-song-btn');
+        const saveSessionBtn = document.getElementById('save-session-btn');
+        const loadSessionBtn = document.getElementById('load-session-btn');
         
         async function initAudio() {
             if (audioContext) return;
@@ -750,14 +772,7 @@
                 <div class="control-group">
                     <label>Time Sig</label>
                     <select class="time-signature-select" data-sequencer-id="${id}">
-                        <option value="4/4">4/4</option>
-                        <option value="3/4">3/4</option>
-                        <option value="6/8">6/8</option>
-                        <option value="12/8">12/8</option>
-                        <option value="2/4">2/4</option>
-                        <option value="5/4">5/4</option>
-                        <option value="5/8">5/8</option>
-                        <option value="7/8">7/8</option>
+                        ${VALID_TIME_SIGNATURES.map(ts => `<option value="${ts}" ${ts === '4/4' ? 'selected' : ''}>${ts}</option>`).join('')}
                     </select>
                 </div>
                 <div class="control-group">
@@ -768,6 +783,8 @@
                     </select>
                 </div>
                 <button class="rnd-all-btn primary-action" data-sequencer-id="${id}">RND All</button>
+                <button class="import-rhythm-btn" data-sequencer-id="${id}">Import</button>
+                <button class="export-rhythm-btn" data-sequencer-id="${id}">Export</button>
                 <button class="play-button" data-sequencer-id="${id}">Play</button>
             `;
             
@@ -800,6 +817,8 @@
             header.querySelector('.time-signature-select').onchange = handleTimeSignatureChange;
             header.querySelector('.pattern-select').onchange = handlePatternLoad;
             header.querySelector('.rnd-all-btn').onclick = () => randomizeSequencer(id);
+            header.querySelector('.import-rhythm-btn').onclick = handleImportRhythm;
+            header.querySelector('.export-rhythm-btn').onclick = handleExportRhythm;
             header.querySelector('.play-button').onclick = () => togglePlay(id);
         }
         
@@ -817,9 +836,17 @@
         
         function updateSequencerGrid(sequencerId, numSteps) {
             const gridDiv = document.querySelector(`#sequencer-${sequencerId} .sequencer-grid`);
+            if (!gridDiv) return;
             gridDiv.innerHTML = '';
             
             const data = sequencersData[sequencerId];
+            if (!data) return;
+
+            const header = document.querySelector(`#sequencer-${sequencerId} .sequencer-header`);
+            if (header) {
+                header.querySelector('.steps-input').value = data.steps;
+                header.querySelector('.time-signature-select').value = data.timeSignature;
+            }
 
             INSTRUMENTS.forEach(instrument => {
                 if (!data.grid[instrument]) data.grid[instrument] = Array(64).fill(false);
@@ -871,7 +898,6 @@
             const container = document.getElementById(`sequencer-${sequencerId}`);
             if (!container) return;
 
-            // Clear both old and new classes to be safe
             container.querySelectorAll('.bar-start, .beat-marker').forEach(el => {
                 el.classList.remove('bar-start', 'beat-marker');
             });
@@ -880,22 +906,18 @@
             if (!data) return;
 
             const [beats, subdivision] = data.timeSignature.split('/').map(Number);
-            // A beat in x/4 time is 4 steps (quarter note). In x/8 time, it's 2 steps (eighth note).
             const stepsPerBeat = subdivision === 8 ? 2 : 4;
             const stepsPerBar = beats * stepsPerBeat;
 
             if (stepsPerBar <= 0) return;
 
             for (let i = 0; i < data.steps; i++) {
-                // Find all checkboxes for the current step index
                 const stepCheckboxes = container.querySelectorAll(`.step-checkbox[data-step="${i}"]`);
-                if (stepCheckboxes.length === 0) continue; // Skip if no checkboxes found
+                if (stepCheckboxes.length === 0) continue;
 
-                // Check if the step is the start of a bar (the "1")
                 if (i % stepsPerBar === 0) {
                     stepCheckboxes.forEach(cb => cb.classList.add('bar-start'));
                 } 
-                // Else, check if it's the start of any other beat
                 else if (i % stepsPerBeat === 0) {
                     stepCheckboxes.forEach(cb => cb.classList.add('beat-marker'));
                 }
@@ -913,6 +935,97 @@
             });
             container.querySelectorAll('.rnd-row-btn').forEach(btn => btn.onclick = handleRandomizeRow);
             container.querySelectorAll('.clear-row-btn').forEach(btn => btn.onclick = handleClearRow);
+        }
+
+        function handleExportRhythm(e) {
+            const sequencerId = e.target.dataset.sequencerId;
+            const data = sequencersData[sequencerId];
+            if (!data) {
+                console.error("Sequencer data not found for ID:", sequencerId);
+                return;
+            }
+
+            const patternObject = {};
+            INSTRUMENTS.forEach(instrument => {
+                const stepData = data.grid[instrument].slice(0, data.steps);
+                if (stepData.some(isActive => isActive)) {
+                    patternObject[instrument] = stepData.map(isActive => isActive ? 1 : 0);
+                }
+            });
+
+            const exportData = {
+                [data.name]: {
+                    steps: data.steps,
+                    timeSignature: data.timeSignature,
+                    pattern: patternObject
+                }
+            };
+            
+            const replacer = (key, value) => (Array.isArray(value) && INSTRUMENTS.includes(key)) ? `@@${JSON.stringify(value)}@@` : value;
+            let jsonString = JSON.stringify(exportData, replacer, 2).replace(/"@@(.*?)@@"/g, '$1');
+
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rhythm-${data.name}.json`;
+            document.body.appendChild(a);
+            a.click();
+            
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function handleImportRhythm(e) {
+            const sequencerId = e.target.dataset.sequencerId;
+            promptForFile(fileContent => {
+                 try {
+                    const importedData = JSON.parse(fileContent);
+                    validateAndApplyRhythm(sequencerId, importedData);
+                 } catch(error) {
+                    alert(`Failed to import rhythm: ${error.message}`);
+                    console.error("Import error:", error);
+                 }
+            });
+        }
+        
+        function validateAndApplyRhythm(sequencerId, importedData) {
+            const patternName = Object.keys(importedData)[0];
+            if (!patternName) throw new Error("Invalid format: No top-level pattern name found.");
+
+            const details = importedData[patternName];
+            if (typeof details !== 'object' || details === null) throw new Error("Invalid format: Pattern data is missing.");
+            
+            const { steps, timeSignature, pattern } = details;
+            
+            // Validation
+            if (typeof steps !== 'number' || steps < 4 || steps > 64) throw new Error(`Invalid 'steps' value: Must be a number between 4 and 64.`);
+            if (!VALID_TIME_SIGNATURES.includes(timeSignature)) throw new Error(`Invalid 'timeSignature' value: "${timeSignature}".`);
+            if (typeof pattern !== 'object' || pattern === null) throw new Error("Invalid format: 'pattern' property is missing or not an object.");
+            
+            // Apply validated data
+            const data = sequencersData[sequencerId];
+            data.steps = steps;
+            data.timeSignature = timeSignature;
+            
+            INSTRUMENTS.forEach(inst => data.grid[inst].fill(false));
+            
+            for (const instrument in pattern) {
+                if (INSTRUMENTS.includes(instrument)) {
+                    const stepArray = pattern[instrument];
+                    if (Array.isArray(stepArray) && stepArray.every(s => s === 0 || s === 1)) {
+                        for (let i = 0; i < data.steps && i < stepArray.length; i++) {
+                            data.grid[instrument][i] = stepArray[i] === 1;
+                        }
+                    } else {
+                        console.warn(`Ignoring invalid step data for instrument: ${instrument}`);
+                    }
+                }
+            }
+
+            updateSequencerGrid(sequencerId, data.steps);
+            alert(`Rhythm '${patternName}' imported successfully into sequencer ${data.name}!`);
         }
 
         function handleInsertSequencers() {
@@ -1006,9 +1119,7 @@
             data.steps = newSteps;
             data.timeSignature = newTimeSignature;
 
-            const header = document.querySelector(`#sequencer-${sequencerId} .sequencer-header`);
-            header.querySelector('.steps-input').value = newSteps;
-            header.querySelector('.time-signature-select').value = newTimeSignature;
+            updateSequencerGrid(sequencerId, newSteps); // update UI elements first
 
             INSTRUMENTS.forEach(instrument => data.grid[instrument].fill(false));
 
@@ -1021,7 +1132,7 @@
                 }
             }
             
-            updateSequencerGrid(sequencerId, newSteps);
+            updateSequencerGrid(sequencerId, newSteps); // update grid content
         }
 
         function handlePatternLoad(e) {
@@ -1237,11 +1348,7 @@
 
         function scheduleNote(step, time) {
             if (playbackPhase === 'countingIn') {
-                // --- FIX STARTS HERE ---
-                // Only play for the four beats of the count-in (steps 0, 1, 2, 3).
-                // This prevents the initial call with step=-1 from playing a sound.
                 if (step < 0) return;
-                // --- FIX ENDS HERE ---
                 
                 const hiHatInstrument = 'hi-hat-closed';
                 const settings = globalMixerSettings[hiHatInstrument];
@@ -1457,8 +1564,7 @@
             const songName = e.target.value;
             if (!songName) return;
 
-            if (isPlaying) stop();
-
+            stop();
             clearAllSequencers();
             
             const songData = exampleSongsData[songName];
@@ -1488,12 +1594,6 @@
                     data.steps = patternDetails.steps || 16;
                     data.timeSignature = patternDetails.timeSignature || '4/4';
                     
-                    const header = document.querySelector(`#sequencer-${patternName} .sequencer-header`);
-                    if (header) {
-                        header.querySelector('.steps-input').value = data.steps;
-                        header.querySelector('.time-signature-select').value = data.timeSignature;
-                    }
-                    
                     const patternGrid = patternDetails.pattern;
                     for (const instrument in patternGrid) {
                         if (INSTRUMENTS.includes(instrument)) {
@@ -1518,7 +1618,7 @@
             panel.innerHTML = ''; // Clear previous content
 
             INSTRUMENTS.forEach(instrument => {
-                const settings = globalMixerSettings[instrument];
+                const settings = globalMixerSettings[instrument] || { volume: 0.8, panning: 0 };
                 const strip = document.createElement('div');
                 strip.className = 'mix-strip';
                 strip.innerHTML = `
@@ -1545,6 +1645,183 @@
                 });
             });
         }
+        
+        // --- IMPORT/EXPORT/SESSION ---
+        function promptForFile(callback) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.onchange = (event) => {
+                if (!event.target.files.length) return;
+                const file = event.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (readEvent) => callback(readEvent.target.result);
+                reader.onerror = () => alert('Error reading file.');
+                reader.readAsText(file);
+                input.value = '';
+            };
+            input.click();
+        }
+
+        function handleExportSong() {
+            const structure = songStructureInput.value;
+            const requiredNames = new Set(structure.replace(/[^A-Z]/g, ''));
+            const patterns = {};
+
+            requiredNames.forEach(name => {
+                const seq = Object.values(sequencersData).find(s => s.name === name);
+                if (seq) {
+                    const patternObject = {};
+                    INSTRUMENTS.forEach(instrument => {
+                        const stepData = seq.grid[instrument].slice(0, seq.steps);
+                        if (stepData.some(isActive => isActive)) {
+                           patternObject[instrument] = stepData.map(isActive => isActive ? 1 : 0);
+                        }
+                    });
+                    patterns[name] = {
+                        steps: seq.steps,
+                        timeSignature: seq.timeSignature,
+                        pattern: patternObject
+                    };
+                }
+            });
+
+            const exportData = { bpm: parseInt(tempoInput.value, 10), structure, patterns };
+            const replacer = (key, value) => (Array.isArray(value) && INSTRUMENTS.includes(key)) ? `@@${JSON.stringify(value)}@@` : value;
+            let jsonString = JSON.stringify(exportData, replacer, 2).replace(/"@@(.*?)@@"/g, '$1');
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'drum-song.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function handleImportSong() {
+            promptForFile(fileContent => {
+                try {
+                    const songData = JSON.parse(fileContent);
+                    
+                    // Validate Song Data
+                    if (typeof songData.bpm !== 'number' || songData.bpm < 20 || songData.bpm > 300) throw new Error("Invalid BPM.");
+                    if (typeof songData.structure !== 'string') throw new Error("Missing or invalid song structure.");
+                    if (typeof songData.patterns !== 'object' || songData.patterns === null) throw new Error("Missing patterns object.");
+                    
+                    stop();
+                    clearAllSequencers();
+                    
+                    // Apply data
+                    bpm = songData.bpm;
+                    tempoInput.value = bpm;
+                    songStructureInput.value = songData.structure;
+
+                    for (const name in songData.patterns) {
+                        createSequencer(name, name); // Create with ID and name being the same
+                        validateAndApplyRhythm(name, { [name]: songData.patterns[name] });
+                    }
+                    alert("Song imported successfully!");
+
+                } catch (error) {
+                    alert(`Failed to import song: ${error.message}`);
+                    console.error("Song import error:", error);
+                }
+            });
+        }
+        
+        function handleSaveSession() {
+            const sessionData = {
+                version: 1,
+                bpm,
+                songStructure: songStructureInput.value,
+                globalMixerSettings,
+                isHumanizeOn,
+                timingHumanizeAmount,
+                velocityHumanizeAmount,
+                swingAmount,
+                isCountInEnabled,
+                randomFillsEnabled,
+                skinName: skinSelect.value,
+                sequencersData
+            };
+            const jsonString = JSON.stringify(sessionData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `drum-session.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function handleLoadSession() {
+            promptForFile(fileContent => {
+                 try {
+                    const sessionData = JSON.parse(fileContent);
+
+                    // --- Validation ---
+                    if (sessionData.version !== 1) throw new Error("Incompatible session version.");
+                    if (typeof sessionData.bpm !== 'number' || sessionData.bpm < 20 || sessionData.bpm > 300) throw new Error("Invalid BPM.");
+                    if (typeof sessionData.isHumanizeOn !== 'boolean') throw new Error("Invalid humanize setting.");
+                    if (typeof sessionData.sequencersData !== 'object') throw new Error("Missing sequencers data.");
+
+                    stop();
+                    clearAllSequencers();
+
+                    // --- Apply State ---
+                    bpm = sessionData.bpm;
+                    tempoInput.value = bpm;
+                    
+                    songStructureInput.value = sessionData.songStructure;
+                    
+                    isHumanizeOn = sessionData.isHumanizeOn;
+                    timingHumanizeAmount = sessionData.timingHumanizeAmount;
+                    velocityHumanizeAmount = sessionData.velocityHumanizeAmount;
+                    swingAmount = sessionData.swingAmount;
+                    
+                    humanizeBtn.classList.toggle('toggled-on', isHumanizeOn);
+                    humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF";
+                    timingHumanizeSlider.value = timingHumanizeAmount;
+                    timingHumanizeSlider.dispatchEvent(new Event('input'));
+                    velocityHumanizeSlider.value = velocityHumanizeAmount;
+                    velocityHumanizeSlider.dispatchEvent(new Event('input'));
+                    swingSlider.value = swingAmount;
+                    swingSlider.dispatchEvent(new Event('input'));
+
+                    isCountInEnabled = sessionData.isCountInEnabled;
+                    countInBtn.classList.toggle('toggled-on', isCountInEnabled);
+                    countInBtn.textContent = isCountInEnabled ? "Count In ON" : "Count In OFF";
+
+                    randomFillsEnabled = sessionData.randomFillsEnabled;
+                    randomFillsBtn.classList.toggle('toggled-on', randomFillsEnabled);
+                    randomFillsBtn.textContent = randomFillsEnabled ? "Fills ON" : "Fills OFF";
+
+                    globalMixerSettings = sessionData.globalMixerSettings;
+                    createGlobalMixerPanel(); // Re-creates sliders with loaded values
+
+                    // Re-create sequencers
+                    sequencersData = sessionData.sequencersData;
+                    for (const id in sequencersData) {
+                        const seqData = sequencersData[id];
+                        createSequencer(id, seqData.name); // Creates empty one
+                        sequencersData[id] = seqData; // Overwrite with loaded data
+                        updateSequencerGrid(id, seqData.steps);
+                    }
+
+                    if (sessionData.skinName && skinsData[sessionData.skinName]) {
+                        skinSelect.value = sessionData.skinName;
+                        applySkin(skinsData[sessionData.skinName]);
+                    }
+
+                    alert("Session loaded successfully!");
+
+                 } catch(error) {
+                    alert(`Failed to load session: ${error.message}`);
+                    console.error("Session load error:", error);
+                 }
+            });
+        }
+
 
         // --- INITIALIZATION ---
         await loadSkins();
@@ -1563,7 +1840,6 @@
         });
         swingSlider.addEventListener('input', (e) => {
             swingAmount = parseFloat(e.target.value);
-            // Display shows the percentage of the first note in an eighth-note pair (50% is straight)
             e.target.previousElementSibling.querySelector('output').value = Math.round((0.5 + swingAmount) * 100);
         });
         insertSequencersBtn.addEventListener('click', handleInsertSequencers);
@@ -1611,6 +1887,10 @@
         });
         skinSelect.addEventListener('change', handleSkinChange);
         randomSongBtn.addEventListener('click', generateRandomSong);
+        exportSongBtn.addEventListener('click', handleExportSong);
+        importSongBtn.addEventListener('click', handleImportSong);
+        saveSessionBtn.addEventListener('click', handleSaveSession);
+        loadSessionBtn.addEventListener('click', handleLoadSession);
 
         createGlobalMixerPanel();
         createSequencer('A', 'A');
