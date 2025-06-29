@@ -172,13 +172,71 @@
             background: linear-gradient(to bottom, #b00, #a00);
         }
 
-        /* --- Global Mix Panel --- */
-        #toggle-mixer-btn {
+        /* --- Panel Toggles --- */
+        .panel-toggle-container {
             flex-basis: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
             margin-bottom: 10px;
-            background: #333;
+        }
+        .panel-toggle-container button {
+             background: #333;
             border-color: #555;
         }
+
+        /* --- Drum Kit Visualizer --- */
+        #drum-kit-visualizer-container {
+            flex-basis: 100%;
+            max-width: 450px;
+            margin: 0 auto 15px auto;
+            background: #222;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+
+        #drum-kit-visualizer {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 400 / 250; /* Maintain aspect ratio */
+            cursor: pointer;
+        }
+        
+        #drum-kit-visualizer .kit-piece {
+            transition: fill 0.1s ease;
+        }
+        #drum-kit-visualizer .kit-piece:hover {
+            filter: brightness(1.2);
+        }
+        
+        #drum-kit-visualizer .cymbal-base {
+            fill: #a56a42; /* Light brown/bronze for cymbals */
+        }
+        
+        .key-display {
+            font-size: 20px;
+            font-weight: bold;
+            fill: var(--text-color);
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none; /* CRITICAL: Allows clicks to pass through to the shape below */
+            font-family: var(--font-family-body);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+        }
+
+        .hit-indicator {
+            opacity: 0;
+            transition: opacity 0.05s ease-out;
+            pointer-events: none;
+        }
+
+        .hit-indicator.hit {
+            opacity: 1;
+            filter: drop-shadow(0 0 8px var(--accent-hover));
+        }
+
+        /* --- Global Mix Panel --- */
         #global-mix-panel {
             flex-basis: 100%;
             background: #222;
@@ -188,6 +246,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 15px;
+            margin: 0 auto 15px auto;
         }
         .mix-strip {
             display: grid;
@@ -235,7 +294,7 @@
 
         .sequencer-header {
             display: flex;
-            flex-wrap: wrap; /* Changed */
+            flex-wrap: wrap; 
             align-items: center;
             gap: 15px;
             margin-bottom: 15px;
@@ -440,9 +499,67 @@
     <div id="top-controls">
         <h1>SongDrumMachine Drum Sequencer</h1>
 
-        <button id="toggle-mixer-btn">Show Volume & Pan</button>
+        <div class="panel-toggle-container">
+            <button id="toggle-mixer-btn">Show Volume & Pan</button>
+            <button id="toggle-visualizer-btn">Show Live Monitor</button>
+        </div>
+
         <div id="global-mix-panel" class="hidden">
             <!-- Sliders will be injected here by JS -->
+        </div>
+        
+        <div id="drum-kit-visualizer-container" class="hidden">
+            <svg id="drum-kit-visualizer" viewBox="0 0 400 250">
+                <!-- Base Kit Shapes (with specific fills and classes) -->
+                <g id="kit-base" stroke="#333" stroke-width="2">
+                    <!-- Kick drum first to be at the bottom -->
+                    <ellipse class="kit-piece" data-visual-id="kick" fill="#555" cx="225" cy="170" rx="45" ry="40" />
+
+                    <!-- Cymbals with a class for styling -->
+                    <circle class="kit-piece cymbal-base" data-visual-id="crash1" cx="60" cy="60" r="45" />
+                    <circle class="kit-piece cymbal-base" data-visual-id="ride" cx="340" cy="70" r="55" />
+                    <circle class="kit-piece cymbal-base" data-visual-id="china" cx="150" cy="40" r="30" />
+
+                    <!-- Drums -->
+                    <circle class="kit-piece" data-visual-id="hi-hat" fill="#8b5a36" cx="100" cy="160" r="40" />
+                    <circle class="kit-piece" data-visual-id="snare" fill="#e0e0e0" cx="175" cy="150" r="35" />
+                    <circle class="kit-piece" data-visual-id="tom1" fill="#777" cx="200" cy="85" r="25" />
+                    <circle class="kit-piece" data-visual-id="tom2" fill="#777" cx="265" cy="95" r="30" />
+                    <ellipse class="kit-piece" data-visual-id="floor-tom" fill="#777" cx="300" cy="165" rx="35" ry="38" />
+                    <circle class="kit-piece" data-visual-id="tom3" fill="#777" cx="345" cy="120" r="28" />
+
+                    <!-- Crash 2 last to be on top of other cymbals -->
+                    <circle class="kit-piece cymbal-base" data-visual-id="crash2" cx="250" cy="40" r="40" />
+                </g>
+                <!-- KEY LABELS -->
+                <g class="key-display">
+                    <text x="225" y="170">A</text>
+                    <text x="60" y="60">E</text>
+                    <text x="340" y="70">R</text>
+                    <text x="150" y="40">Y</text>
+                    <text x="100" y="160" font-size="16px">D / W</text>
+                    <text x="175" y="150" fill="#111">S</text>
+                    <text x="200" y="85">G</text>
+                    <text x="265" y="95">F</text>
+                    <text x="300" y="165">H</text>
+                    <text x="345" y="120">J</text>
+                    <text x="250" y="40">T</text>
+                </g>
+                <!-- Hit Highlights (initially hidden, mirrored structure) -->
+                <g id="kit-hits" fill="var(--led-playhead)" stroke="var(--accent-hover)" stroke-width="3">
+                     <ellipse class="hit-indicator" id="vis-kick" cx="225" cy="170" rx="45" ry="40" />
+                     <circle class="hit-indicator" id="vis-crash1" cx="60" cy="60" r="45" />
+                     <circle class="hit-indicator" id="vis-ride" cx="340" cy="70" r="55" />
+                     <circle class="hit-indicator" id="vis-china" cx="150" cy="40" r="30" />
+                     <circle class="hit-indicator" id="vis-hi-hat" cx="100" cy="160" r="40" />
+                     <circle class="hit-indicator" id="vis-snare" cx="175" cy="150" r="35" />
+                     <circle class="hit-indicator" id="vis-tom1" cx="200" cy="85" r="25" />
+                     <circle class="hit-indicator" id="vis-tom2" cx="265" cy="95" r="30" />
+                     <ellipse class="hit-indicator" id="vis-floor-tom" cx="300" cy="165" rx="35" ry="38" />
+                     <circle class="hit-indicator" id="vis-tom3" cx="345" cy="120" r="28" />
+                     <circle class="hit-indicator" id="vis-crash2" cx="250" cy="40" r="40" />
+                </g>
+            </svg>
         </div>
 
         <div class="control-group">
@@ -611,6 +728,22 @@
         const FILL_INSTRUMENTS = ['snare', 'tom1', 'tom2', 'tom3', 'floor-tom'];
         const VALID_TIME_SIGNATURES = ['4/4', '3/4', '6/8', '12/8', '2/4', '5/4', '5/8', '7/8'];
 
+        const KEY_MAP = {
+            'a': 'kick', 's': 'snare', 'd': 'hi-hat-closed', 'f': 'tom2', 'g': 'tom1', 'h': 'floor-tom', 'j': 'tom3',
+            'w': 'hi-hat-open', 'e': 'crash1', 'r': 'ride', 't': 'crash2', 'y': 'china'
+        };
+
+        const VISUAL_TO_INSTRUMENT_MAP = {
+            'kick': 'kick', 'snare': 'snare', 'hi-hat': 'hi-hat-closed', 'tom1': 'tom1',
+            'tom2': 'tom2', 'tom3': 'tom3', 'floor-tom': 'floor-tom', 'crash1': 'crash1', 'crash2': 'crash2',
+            'ride': 'ride', 'china': 'china'
+        };
+
+        const VISUAL_MAP = {
+            'crash1': 'crash1', 'crash2': 'crash2', 'ride': 'ride', 'china': 'china',
+            'tom1': 'tom1', 'tom2': 'tom2', 'tom3': 'tom3', 'floor-tom': 'floor-tom',
+            'hi-hat-open': 'hi-hat', 'hi-hat-closed': 'hi-hat', 'snare': 'snare', 'kick': 'kick'
+        };
 
         // --- GLOBAL MIXER SETTINGS ---
         let globalMixerSettings = {
@@ -620,8 +753,8 @@
             'china': { volume: 0.4, panning: -0.3 },
             'tom1': { volume: 0.9, panning: -0.2 },
             'tom2': { volume: 0.9, panning: 0.2 },
-            'tom3': { volume: 0.9, panning: -0.5 },
-            'floor-tom': { volume: 0.9, panning: 0.5 },
+            'tom3': { volume: 0.9, panning: 0.5 },
+            'floor-tom': { volume: 0.9, panning: 0.6 },
             'hi-hat-open': { volume: 0.6, panning: 0.1 },
             'hi-hat-closed': { volume: 0.4, panning: 0.1 },
             'snare': { volume: 1.0, panning: 0 },
@@ -635,7 +768,7 @@
 
         const midiNoteToInstrumentMap = {
             36: 'kick', 35: 'kick', 38: 'snare', 40: 'snare', 42: 'hi-hat-closed', 44: 'hi-hat-closed',
-            46: 'hi-hat-open', 41: 'floor-tom', 43: 'floor-tom', 45: 'tom2', 47: 'tom2', 48: 'tom1',
+            46: 'hi-hat-open', 41: 'floor-tom', 43: 'tom3', 45: 'tom2', 47: 'tom1', 48: 'tom1',
             50: 'tom1', 49: 'crash1', 57: 'crash2', 51: 'ride', 52: 'china', 55: 'crash1', 59: 'ride',
         };
         
@@ -660,6 +793,7 @@
         const randomFillsBtn = document.getElementById('random-fills-btn');
         const countInBtn = document.getElementById('count-in-btn');
         const toggleMixerBtn = document.getElementById('toggle-mixer-btn');
+        const toggleVisualizerBtn = document.getElementById('toggle-visualizer-btn');
         const skinSelect = document.getElementById('skin-select');
         const randomSongBtn = document.getElementById('random-song-btn');
         const exportSongBtn = document.getElementById('export-song-btn');
@@ -1071,17 +1205,10 @@
         function handleStepChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].grid[instrument][step] = e.target.checked; }
         function handleVelocityChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].velocities[instrument][step] = parseInt(e.target.value, 10); }
         function handleLabelClick(e) {
-            const { instrument, sequencerId } = e.target.dataset;
+            const { instrument } = e.target.dataset;
             const settings = globalMixerSettings[instrument];
             playSample(instrument, settings.volume, settings.panning, 127, audioContext.currentTime, -1);
-            
-            if ((isPlaying || isSongPlaying) && (!isSongPlaying || (isSongPlaying && currentSongSequencerId === sequencerId))) {
-                const stepCheckbox = document.querySelector(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-instrument="${instrument}"][data-step="${currentStep}"]`);
-                if (stepCheckbox) {
-                    stepCheckbox.checked = !stepCheckbox.checked;
-                    stepCheckbox.dispatchEvent(new Event('change'));
-                }
-            }
+            liveRecordNote(instrument);
         }
         function handleVelocityToggle(e) {
             const row = e.target.closest('.instrument-row');
@@ -1200,7 +1327,39 @@
             tempoInput.value = bpm;
         }
 
+        function visualizeHit(instrument) {
+            const visualInstrument = VISUAL_MAP[instrument];
+            if (!visualInstrument) return;
+
+            const el = document.getElementById(`vis-${visualInstrument}`);
+            if (el) {
+                el.classList.add('hit');
+                setTimeout(() => {
+                    el.classList.remove('hit');
+                }, 100); // Flash duration
+            }
+        }
+        
+        function liveRecordNote(instrument) {
+            // Only record if a single pattern is playing (not song mode)
+            if (isPlaying && !isSongPlaying) {
+                const playingBtn = document.querySelector('.play-button.playing');
+                const sequencerId = playingBtn ? playingBtn.dataset.sequencerId : null;
+                
+                if (sequencerId && instrument) {
+                    const stepCheckbox = document.querySelector(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-instrument="${instrument}"][data-step="${currentStep}"]`);
+                    if (stepCheckbox && !stepCheckbox.checked) {
+                        stepCheckbox.checked = true;
+                        // Dispatch change event to update the data model
+                        stepCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            }
+        }
+
         function playSample(instrument, volume, panning = 0, velocity = 127, scheduledTime, step) {
+            visualizeHit(instrument);
+
             if (!audioContext || !audioBuffers[instrument]) return;
 
             const source = audioContext.createBufferSource();
@@ -1528,11 +1687,12 @@
         async function handleMidiMessage(message) {
             await initAudio();
             const [command, note, velocity] = message.data;
-            if (command === 144 && velocity > 0) {
+            if ((command & 0xF0) === 0x90 && velocity > 0) { // Note On
                 const instrument = midiNoteToInstrumentMap[note];
                 if (instrument) {
                     const settings = globalMixerSettings[instrument] || { volume: 0.8, panning: 0 };
                     playSample(instrument, settings.volume, settings.panning, velocity, audioContext.currentTime, -1);
+                    liveRecordNote(instrument);
                 }
             }
         }
@@ -1880,11 +2040,47 @@
             console.log(currentMidiOutput ? `MIDI Output selected: ${currentMidiOutput.name}` : 'MIDI Output deselected.');
         };
         exampleSongSelect.addEventListener('change', handleLoadExampleSong);
+        
+        // Panel Toggles
         toggleMixerBtn.addEventListener('click', () => {
             const panel = document.getElementById('global-mix-panel');
             panel.classList.toggle('hidden');
             toggleMixerBtn.textContent = panel.classList.contains('hidden') ? 'Show Volume & Pan' : 'Hide Volume & Pan';
         });
+        toggleVisualizerBtn.addEventListener('click', () => {
+            const panel = document.getElementById('drum-kit-visualizer-container');
+            panel.classList.toggle('hidden');
+            toggleVisualizerBtn.textContent = panel.classList.contains('hidden') ? 'Show Live Monitor' : 'Hide Live Monitor';
+        });
+
+        // Live Performance Inputs
+        document.addEventListener('keydown', async (e) => {
+            // Do not trigger if user is typing in an input field
+            if (e.target.matches('input[type="text"], input[type="number"]')) return;
+            if (e.repeat) return; // Prevent continuous firing on key hold
+            const instrument = KEY_MAP[e.key.toLowerCase()];
+            if (instrument) {
+                e.preventDefault();
+                await initAudio();
+                const settings = globalMixerSettings[instrument];
+                playSample(instrument, settings.volume, settings.panning, 127, audioContext.currentTime, -1);
+                liveRecordNote(instrument);
+            }
+        });
+
+        document.querySelectorAll('#drum-kit-visualizer .kit-piece').forEach(el => {
+            el.addEventListener('click', async (e) => {
+                const visualId = e.target.dataset.visualId;
+                const instrument = VISUAL_TO_INSTRUMENT_MAP[visualId];
+                if (instrument) {
+                    await initAudio();
+                    const settings = globalMixerSettings[instrument];
+                    playSample(instrument, settings.volume, settings.panning, 127, audioContext.currentTime, -1);
+                    liveRecordNote(instrument);
+                }
+            });
+        });
+
         skinSelect.addEventListener('change', handleSkinChange);
         randomSongBtn.addEventListener('click', generateRandomSong);
         exportSongBtn.addEventListener('click', handleExportSong);
