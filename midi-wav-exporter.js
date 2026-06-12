@@ -175,7 +175,8 @@
     // Standard WAV array buffer formatting
     function bufferToWav(buffer) {
         const numOfChan = buffer.numberOfChannels,
-              length = buffer.length * numOfChan * 2 + 44,
+              dataLength = buffer.length * numOfChan * 2,
+              length = dataLength + 44,
               bufferArr = new ArrayBuffer(length),
               view = new DataView(bufferArr),
               channels = [], 
@@ -185,47 +186,48 @@
             offset = 0,
             pos = 0;
 
+        function setUint16(data) {
+            view.setUint16(pos, data, true);
+            pos += 2;
+        }
+
+        function setUint32(data) {
+            view.setUint32(pos, data, true);
+            pos += 4;
+        }
+
         setUint32(0x46464952); // "RIFF"
-        setUint32(length - 8);
+        setUint32(length - 8); // Tiedostokoko miinus 8 tavua
         setUint32(0x45564157); // "WAVE"
 
         setUint32(0x20746d66); // "fmt "
-        setUint32(16);
-        setUint16(1);          // Raw PCM
+        setUint32(16);         // Subchunk1Size (16 PCM-formaatille)
+        setUint16(1);          // AudioFormat (1 = pakkaamaton PCM)
         setUint16(numOfChan);
         setUint32(sampleRate);
-        setUint32(sampleRate * numOfChan * 2);
-        setUint16(numOfChan * 2);
-        setUint16(16);
+        setUint32(sampleRate * numOfChan * 2); // ByteRate
+        setUint16(numOfChan * 2);              // BlockAlign
+        setUint16(16);                         // BitsPerSample (16-bit)
 
         setUint32(0x61746164); // "data"
-        setUint32(length - pos - 4);
+        setUint32(dataLength); // Äänidatan pituus tavuina
 
         for(i = 0; i < numOfChan; i++) {
             channels.push(buffer.getChannelData(i));
         }
 
-        while(pos < length - 44) {
+        // Kirjoitetaan äänidata suoraan pos-indeksin osoittamaan kohtaan
+        while(pos < length) {
             for(i = 0; i < numOfChan; i++) {
                 sample = Math.max(-1, Math.min(1, channels[i][offset]));
                 sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF);
-                view.setInt16(44 + pos, sample, true);
+                view.setInt16(pos, sample, true);
                 pos += 2;
             }
             offset++;
         }
 
         return bufferArr;
-
-        function setUint16(data) {
-            view.setUint16(44 + pos, data, true);
-            pos += 2;
-        }
-
-        function setUint32(data) {
-            view.setUint32(44 + pos, data, true);
-            pos += 4;
-        }
     }
 
     // Expose functionality directly to window namespace without requiring a server
