@@ -2,6 +2,7 @@
     "Basic Waltz (3/4)": {
         "steps": 12,
         "timeSignature": "3/4",
+        "tuplet": "none",
         "pattern": {
             "kick":           [1,0,0,0, 0,0,0,0, 0,0,0,0],
             "snare":          [0,0,0,0, 1,0,0,0, 1,0,0,0],
@@ -11,6 +12,7 @@
     "Odd Groove (7/8)": {
         "steps": 14,
         "timeSignature": "7/8",
+        "tuplet": "none",
         "pattern": {
             "kick":           [1,0,0,0, 0,0,1,0, 0,0,1,0, 0,0],
             "snare":          [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0],
@@ -20,6 +22,7 @@
     "Four on the Floor": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": { 
             "kick": [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], 
             "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], 
@@ -29,6 +32,7 @@
     "Basic Rock": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": { 
             "kick": [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0], 
             "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], 
@@ -38,6 +42,7 @@
     "Blast Beat": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": { 
             "kick": [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1], 
             "snare": [0,1,0,1, 0,1,0,1, 0,1,0,1, 0,1,0,1], 
@@ -47,6 +52,7 @@
     "Funky Drummer": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": { 
             "kick": [1,0,0,1, 0,0,1,0, 0,1,0,0, 1,0,0,0], 
             "snare": [0,0,1,0, 1,0,0,1, 0,0,1,0, 0,0,1,0], 
@@ -57,6 +63,7 @@
     "Double Kick Metal": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": {
             "kick": [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1],
             "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
@@ -67,6 +74,7 @@
     "D-Beat (Crust Punk)": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": {
             "kick": [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0],
             "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
@@ -76,6 +84,7 @@
     "Skank Beat (Thrash/Punk)": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": {
             "kick": [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
             "snare": [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],
@@ -85,6 +94,7 @@
     "Half-Time Shuffle": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": {
             "kick": [1,0,0,0, 0,0,1,0, 0,0,1,0, 0,0,0,0],
             "snare": [0,0,0,0, 0,0,0,0, 1,0,0,1, 0,0,0,0],
@@ -95,6 +105,7 @@
     "Basic Blues Rock": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": {
             "kick": [1,0,0,1, 0,0,1,0, 1,0,0,1, 0,0,1,0],
             "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
@@ -104,6 +115,7 @@
     "Bossa Nova": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": {
             "kick": [1,0,0,1, 0,0,1,0, 1,0,0,1, 0,0,1,0],
             "snare": [0,0,1,0, 0,1,0,0, 0,1,0,0, 1,0,0,1],
@@ -113,6 +125,7 @@
     "Trap Beat 808": {
         "steps": 16, 
         "timeSignature": "4/4", 
+        "tuplet": "none",
         "pattern": {
             "kick": [1,0,0,0, 0,0,1,0, 0,0,0,0, 1,0,0,0],
             "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
