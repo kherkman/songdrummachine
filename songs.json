@@ -248,4 +248,29 @@
   },
   "Jukebox Jive": {
     "bpm": 165,
-    "structure": "AAAA4BBBB2AAA
+    "structure": "AAAA4BBBB2AAAA",
+    "patterns": {
+      "A": {
+        "steps": 16,
+        "timeSignature": "4/4",
+        "tuplet": "none",
+        "pattern": {
+          "kick": [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+          "snare": [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+          "hi-hat-closed": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        }
+      },
+      "B": {
+        "steps": 16,
+        "timeSignature": "4/4",
+        "tuplet": "none",
+        "pattern": {
+          "kick": [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+          "snare": [0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,1],
+          "crash1": [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+          "ride": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        }
+      }
+    }
+  }
+}
