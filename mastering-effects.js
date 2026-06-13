@@ -8,6 +8,7 @@
             this.states = {
                 saturation: false,
                 compressor: false,
+                filter: false,
                 delay: false,
                 reverb: false,
                 limiter: false
@@ -38,6 +39,18 @@
             this.compNode.release.setValueAtTime(0.25, this.ctx.currentTime);
             this.compWet = this.ctx.createGain();
             this.compDry = this.ctx.createGain();
+
+            // HPF / LPF MASTER FILTERS
+            this.hpfNode = this.ctx.createBiquadFilter();
+            this.hpfNode.type = 'highpass';
+            this.hpfNode.frequency.setValueAtTime(10, this.ctx.currentTime);
+
+            this.lpfNode = this.ctx.createBiquadFilter();
+            this.lpfNode.type = 'lowpass';
+            this.lpfNode.frequency.setValueAtTime(22000, this.ctx.currentTime);
+
+            this.filterWet = this.ctx.createGain();
+            this.filterDry = this.ctx.createGain();
 
             // ROOM DELAY
             this.delayNode = this.ctx.createDelay();
@@ -80,10 +93,17 @@
             this.compWet.connect(this.compOut);
             this.compDry.connect(this.compOut);
 
-            // Room Delay routing
+            // HPF / LPF Master Filters routing
+            this.compOut.connect(this.hpfNode).connect(this.lpfNode).connect(this.filterWet);
+            this.compOut.connect(this.filterDry);
+            this.filterOut = c.createGain();
+            this.filterWet.connect(this.filterOut);
+            this.filterDry.connect(this.filterOut);
+
+            // Room Delay routing (downstream of filters)
             this.delayNode.connect(this.delayFeedback).connect(this.delayNode);
-            this.compOut.connect(this.delayNode).connect(this.delayWet);
-            this.compOut.connect(this.delayDry);
+            this.filterOut.connect(this.delayNode).connect(this.delayWet);
+            this.filterOut.connect(this.delayDry);
             this.delayOut = c.createGain();
             this.delayWet.connect(this.delayOut);
             this.delayDry.connect(this.delayOut);
@@ -140,6 +160,11 @@
             const compWetVal = this.states.compressor ? 1.0 : 0;
             this.compWet.gain.setValueAtTime(compWetVal, c.currentTime);
             this.compDry.gain.setValueAtTime(1 - compWetVal, c.currentTime);
+
+            // Master HPF/LPF Filter Unit
+            const filterWetVal = this.states.filter ? 1.0 : 0;
+            this.filterWet.gain.setValueAtTime(filterWetVal, c.currentTime);
+            this.filterDry.gain.setValueAtTime(1 - filterWetVal, c.currentTime);
 
             // Room Delay Wet/Dry mix
             const delayMix = this.states.delay ? 0.25 : 0;
