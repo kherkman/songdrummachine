@@ -66,6 +66,41 @@
             margin-bottom: 10px;
         }
         
+        /* --- Display Panel CSS --- */
+        #playback-status-panel {
+            flex-basis: 100%;
+            background: #111;
+            border: 2px solid var(--accent-color);
+            border-radius: 6px;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            font-family: 'Orbitron', monospace;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            color: var(--accent-hover);
+        }
+        
+        .status-metric {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .status-metric label {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            color: var(--text-color);
+            letter-spacing: 1px;
+        }
+        
+        .status-metric span {
+            font-size: 1.3em;
+            font-weight: bold;
+            text-shadow: 0 0 5px var(--accent-color);
+        }
+
         .control-group {
             display: flex;
             flex-direction: column;
@@ -179,6 +214,7 @@
             justify-content: center;
             gap: 15px;
             margin-bottom: 10px;
+            flex-wrap: wrap;
         }
         .panel-toggle-container button {
              background: #333;
@@ -199,7 +235,7 @@
         #drum-kit-visualizer {
             width: 100%;
             height: auto;
-            aspect-ratio: 400 / 250; /* Maintain aspect ratio */
+            aspect-ratio: 400 / 250;
             cursor: pointer;
         }
         
@@ -211,7 +247,7 @@
         }
         
         #drum-kit-visualizer .cymbal-base {
-            fill: #a56a42; /* Light brown/bronze for cymbals */
+            fill: #a56a42;
         }
         
         .key-display {
@@ -220,7 +256,7 @@
             fill: var(--text-color);
             text-anchor: middle;
             dominant-baseline: middle;
-            pointer-events: none; /* CRITICAL: Allows clicks to pass through to the shape below */
+            pointer-events: none;
             font-family: var(--font-family-body);
             text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
         }
@@ -287,6 +323,113 @@
             padding: 4px;
             margin-top: 5px;
             width: 100%;
+        }
+
+        /* --- Mastering Panel CSS --- */
+        #mastering-panel {
+            flex-basis: 100%;
+            background: #222;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 15px;
+            margin: 0 auto 15px auto;
+        }
+        
+        .mastering-rack {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        
+        .rack-unit {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        .unit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+            margin-bottom: 8px;
+        }
+        
+        .unit-header h3 {
+            margin: 0;
+            font-size: 1em;
+            color: var(--accent-color);
+            font-family: var(--font-family-body);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .unit-power {
+            font-size: 0.75em;
+            padding: 2px 6px;
+        }
+        
+        .unit-power.active {
+            background: linear-gradient(to bottom, #00b33c, #008a2e);
+            color: white;
+            text-shadow: 0 0 3px white;
+        }
+        
+        .unit-knobs {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .knob-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8em;
+        }
+        
+        .knob-group input[type="range"] {
+            width: 90px;
+            margin: 0;
+        }
+
+        /* --- Visual Sequence Block CSS --- */
+        #song-structure-visual {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: #111;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            width: 100%;
+            min-height: 44px;
+            box-sizing: border-box;
+            align-items: center;
+            justify-content: center;
+            margin-top: 5px;
+        }
+        
+        .visual-block {
+            background: #333;
+            border: 1px solid #555;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85em;
+            color: #ccc;
+            transition: all 0.15s ease;
+            font-family: 'Orbitron', monospace;
+        }
+        
+        .visual-block.active {
+            background: var(--led-playhead);
+            color: #111;
+            border-color: #fff;
+            box-shadow: 0 0 10px var(--led-playhead);
+            transform: scale(1.08);
         }
 
         /* --- Sequencer Container --- */
@@ -423,12 +566,10 @@
             box-shadow: 0 0 10px var(--led-playhead);
         }
         
-        /* For regular beats (2, 3, 4, etc.) - a subtle dark gray */
         .beat-marker:not(:checked) {
             background-color: #282828;
         }
 
-        /* For the first beat of the bar (the "1") - a brighter, more prominent gray */
         .bar-start:not(:checked) {
             background-color: #404040; 
             border-color: #555;
@@ -442,8 +583,8 @@
             background: #444;
             outline: none;
             border-radius: 4px;
-            writing-mode: bt-lr; /* IE */
-            -webkit-appearance: slider-vertical; /* WebKit */
+            writing-mode: bt-lr;
+            -webkit-appearance: slider-vertical;
             transform: rotate(180deg);
             height: 50px;
             width: 10px;
@@ -507,9 +648,114 @@
     <div id="top-controls">
         <h1>SongDrumMachine Drum Sequencer</h1>
 
+        <!-- High-contrast display panel of the sequencer / song status -->
+        <div id="playback-status-panel">
+            <div class="status-metric">
+                <label>Active Sequencer</label>
+                <span id="display-active-seq">-</span>
+            </div>
+            <div class="status-metric">
+                <label>Seq Time</label>
+                <span id="display-seq-time">0:00.0 / 0:00.0</span>
+            </div>
+            <div class="status-metric">
+                <label>Song Time</label>
+                <span id="display-song-time">0:00.0 / 0:00.0</span>
+            </div>
+        </div>
+
         <div class="panel-toggle-container">
             <button id="toggle-mixer-btn">Show Volume, Pan & Sample</button>
             <button id="toggle-visualizer-btn">Show Live Monitor</button>
+            <button id="toggle-mastering-btn">Show Mastering Processor</button>
+            <button id="info-btn" class="primary-action">Arrangement Info</button>
+        </div>
+
+        <!-- Master FX Rack -->
+        <div id="mastering-panel" class="hidden">
+            <div class="mastering-rack">
+                <!-- Saturation -->
+                <div class="rack-unit">
+                    <div class="unit-header">
+                        <h3>Saturation</h3>
+                        <button id="sat-toggle-btn" class="unit-power">OFF</button>
+                    </div>
+                    <div class="unit-knobs">
+                        <div class="knob-group">
+                            <label>Drive</label>
+                            <input type="range" id="sat-drive" min="0" max="100" value="20">
+                        </div>
+                        <div class="knob-group">
+                            <label>Mix</label>
+                            <input type="range" id="sat-mix" min="0" max="100" value="40">
+                        </div>
+                    </div>
+                </div>
+                <!-- Compressor -->
+                <div class="rack-unit">
+                    <div class="unit-header">
+                        <h3>Compressor</h3>
+                        <button id="comp-toggle-btn" class="unit-power">OFF</button>
+                    </div>
+                    <div class="unit-knobs">
+                        <div class="knob-group">
+                            <label>Thresh</label>
+                            <input type="range" id="comp-thresh" min="-60" max="0" value="-24">
+                        </div>
+                        <div class="knob-group">
+                            <label>Ratio</label>
+                            <input type="range" id="comp-ratio" min="1" max="20" value="4">
+                        </div>
+                    </div>
+                </div>
+                <!-- Delay -->
+                <div class="rack-unit">
+                    <div class="unit-header">
+                        <h3>Room Delay</h3>
+                        <button id="delay-toggle-btn" class="unit-power">OFF</button>
+                    </div>
+                    <div class="unit-knobs">
+                        <div class="knob-group">
+                            <label>Time</label>
+                            <input type="range" id="delay-time" min="20" max="1000" value="150">
+                        </div>
+                        <div class="knob-group">
+                            <label>Feedback</label>
+                            <input type="range" id="delay-feedback" min="0" max="95" value="30">
+                        </div>
+                    </div>
+                </div>
+                <!-- Reverb -->
+                <div class="rack-unit">
+                    <div class="unit-header">
+                        <h3>Reverb</h3>
+                        <button id="reverb-toggle-btn" class="unit-power">OFF</button>
+                    </div>
+                    <div class="unit-knobs">
+                        <div class="knob-group">
+                            <label>Decay</label>
+                            <input type="range" id="reverb-decay" min="5" max="50" value="15">
+                        </div>
+                        <div class="knob-group">
+                            <label>Mix</label>
+                            <input type="range" id="reverb-mix" min="0" max="100" value="15">
+                        </div>
+                    </div>
+                </div>
+                <!-- Limiter -->
+                <div class="rack-unit">
+                    <div class="unit-header">
+                        <h3>Limiter</h3>
+                        <button id="limiter-toggle-btn" class="unit-power">OFF</button>
+                    </div>
+                    <div class="unit-knobs">
+                        <div class="knob-group">
+                            <label>Ceiling</label>
+                            <input type="range" id="limiter-ceil" min="-10" max="0" step="0.1" value="-1">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="global-mix-panel" class="hidden">
@@ -518,28 +764,19 @@
         
         <div id="drum-kit-visualizer-container" class="hidden">
             <svg id="drum-kit-visualizer" viewBox="0 0 400 250">
-                <!-- Base Kit Shapes (with specific fills and classes) -->
                 <g id="kit-base" stroke="#333" stroke-width="2">
-                    <!-- Kick drum first to be at the bottom -->
                     <ellipse class="kit-piece" data-visual-id="kick" fill="#555" cx="225" cy="170" rx="45" ry="40" />
-
-                    <!-- Cymbals with a class for styling -->
                     <circle class="kit-piece cymbal-base" data-visual-id="crash1" cx="60" cy="60" r="45" />
                     <circle class="kit-piece cymbal-base" data-visual-id="ride" cx="340" cy="70" r="55" />
                     <circle class="kit-piece cymbal-base" data-visual-id="china" cx="150" cy="40" r="30" />
-
-                    <!-- Drums -->
                     <circle class="kit-piece" data-visual-id="hi-hat" fill="#8b5a36" cx="100" cy="160" r="40" />
                     <circle class="kit-piece" data-visual-id="snare" fill="#e0e0e0" cx="175" cy="150" r="35" />
                     <circle class="kit-piece" data-visual-id="tom1" fill="#777" cx="200" cy="85" r="25" />
                     <circle class="kit-piece" data-visual-id="tom2" fill="#777" cx="265" cy="95" r="30" />
                     <ellipse class="kit-piece" data-visual-id="floor-tom" fill="#777" cx="300" cy="165" rx="35" ry="38" />
                     <circle class="kit-piece" data-visual-id="tom3" fill="#777" cx="345" cy="120" r="28" />
-
-                    <!-- Crash 2 last to be on top of other cymbals -->
                     <circle class="kit-piece cymbal-base" data-visual-id="crash2" cx="250" cy="40" r="40" />
                 </g>
-                <!-- KEY LABELS -->
                 <g class="key-display">
                     <text x="225" y="170">A</text>
                     <text x="60" y="60">E</text>
@@ -553,7 +790,6 @@
                     <text x="345" y="120">J</text>
                     <text x="250" y="40">T</text>
                 </g>
-                <!-- Hit Highlights (initially hidden, mirrored structure) -->
                 <g id="kit-hits" fill="var(--led-playhead)" stroke="var(--accent-hover)" stroke-width="3">
                      <ellipse class="hit-indicator" id="vis-kick" cx="225" cy="170" rx="45" ry="40" />
                      <circle class="hit-indicator" id="vis-crash1" cx="60" cy="60" r="45" />
@@ -622,10 +858,14 @@
              </div>
         </div>
 
-        <div class="control-group">
-            <label for="song-structure-input">Song Structure</label>
-            <input type="text" id="song-structure-input" placeholder="e.g. AB1AB2C">
-            <div style="display:flex; flex-wrap: wrap; gap: 5px; justify-content: center;">
+        <!-- Arrangement Section containing dynamic progress indicators -->
+        <div class="control-group" style="flex-basis: 100%;">
+            <label for="song-structure-input">Song Structure & Highlighted Progress</label>
+            <input type="text" id="song-structure-input" placeholder="e.g. <+A+A4B>">
+            <div id="song-structure-visual">
+                <!-- Rendered sequence blocks go here -->
+            </div>
+            <div style="display:flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 5px;">
                 <button id="song-play-btn" class="play-button">Song Play</button>
                 <button id="export-song-midi-btn" class="primary-action">Export MIDI</button>
                 <button id="export-song-wav-btn" class="primary-action">Export WAV</button>
@@ -675,6 +915,8 @@
         <!-- Sequencers will be inserted here by JavaScript -->
     </div>
     
+    <script src="info-panel.js"></script>
+    <script src="mastering-effects.js"></script>
     <script src="midi-wav-exporter.js"></script>
 
     <script>
@@ -693,14 +935,17 @@
         let sequencersData = {};
         let skinsData = {};
 
+        // --- MASTERING SYSTEM INSTANCE ---
+        let masteringProcessor = null;
+
         // --- PLAYBACK SCHEDULING VARIABLES ---
         let schedulerTimerID;
         let nextNoteTime = 0.0;
         const scheduleAheadTime = 0.1;
-        let playbackPhase = 'stopped'; // Can be 'stopped', 'countingIn', or 'song'
+        let playbackPhase = 'stopped'; // 'stopped', 'countingIn', 'song'
 
         // --- SONG MODE STATE ---
-        let songStructure = [];
+        let songBlocks = [];
         let currentSongSectionIndex = 0;
         let currentSongSequencerId = '';
         let randomFillsEnabled = true;
@@ -708,6 +953,8 @@
         let currentFillPattern = null;
         let fillStepCount = 0;
         let isCountInEnabled = false;
+        let previousBpm = 120; // tracking tempo jumps/glides
+        let totalSongDuration = 0.0;
         
         // --- MIDI & EXAMPLE SONG DATA ---
         let midiAccess = null;
@@ -792,6 +1039,8 @@
         const countInBtn = document.getElementById('count-in-btn');
         const toggleMixerBtn = document.getElementById('toggle-mixer-btn');
         const toggleVisualizerBtn = document.getElementById('toggle-visualizer-btn');
+        const toggleMasteringBtn = document.getElementById('toggle-mastering-btn');
+        const infoBtn = document.getElementById('info-btn');
         const skinSelect = document.getElementById('skin-select');
         const randomSongBtn = document.getElementById('random-song-btn');
         const exportSongBtn = document.getElementById('export-song-btn');
@@ -803,12 +1052,86 @@
             if (audioContext) return;
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Initialize the live mastering rack on our active context thread
+                if (window.MasteringProcessor) {
+                    masteringProcessor = new window.MasteringProcessor(audioContext);
+                    masteringProcessor.output.connect(audioContext.destination);
+                    initMasteringUIListeners();
+                }
+                
                 await loadAllSamples();
             } catch (e) {
                 alert('Web Audio API is not supported or could not be initialized.');
                 console.error(e);
             }
         }
+
+        function initMasteringUIListeners() {
+            // Power toggles
+            document.getElementById('sat-toggle-btn').onclick = (e) => {
+                masteringProcessor.states.saturation = !masteringProcessor.states.saturation;
+                e.target.classList.toggle('active', masteringProcessor.states.saturation);
+                e.target.textContent = masteringProcessor.states.saturation ? 'ON' : 'OFF';
+                masteringProcessor.updateBypassGains();
+            };
+            document.getElementById('comp-toggle-btn').onclick = (e) => {
+                masteringProcessor.states.compressor = !masteringProcessor.states.compressor;
+                e.target.classList.toggle('active', masteringProcessor.states.compressor);
+                e.target.textContent = masteringProcessor.states.compressor ? 'ON' : 'OFF';
+                masteringProcessor.updateBypassGains();
+            };
+            document.getElementById('delay-toggle-btn').onclick = (e) => {
+                masteringProcessor.states.delay = !masteringProcessor.states.delay;
+                e.target.classList.toggle('active', masteringProcessor.states.delay);
+                e.target.textContent = masteringProcessor.states.delay ? 'ON' : 'OFF';
+                masteringProcessor.updateBypassGains();
+            };
+            document.getElementById('reverb-toggle-btn').onclick = (e) => {
+                masteringProcessor.states.reverb = !masteringProcessor.states.reverb;
+                e.target.classList.toggle('active', masteringProcessor.states.reverb);
+                e.target.textContent = masteringProcessor.states.reverb ? 'ON' : 'OFF';
+                masteringProcessor.updateBypassGains();
+            };
+            document.getElementById('limiter-toggle-btn').onclick = (e) => {
+                masteringProcessor.states.limiter = !masteringProcessor.states.limiter;
+                e.target.classList.toggle('active', masteringProcessor.states.limiter);
+                e.target.textContent = masteringProcessor.states.limiter ? 'ON' : 'OFF';
+                masteringProcessor.updateBypassGains();
+            };
+
+            // Knob modulations
+            document.getElementById('sat-drive').oninput = (e) => {
+                masteringProcessor.satNode.curve = masteringProcessor.makeDistortionCurve(parseInt(e.target.value, 10));
+            };
+            document.getElementById('sat-mix').oninput = (e) => {
+                masteringProcessor.satMixValue = parseInt(e.target.value, 10) / 100;
+                masteringProcessor.updateBypassGains();
+            };
+            document.getElementById('comp-thresh').oninput = (e) => {
+                masteringProcessor.compNode.threshold.setValueAtTime(parseFloat(e.target.value), audioContext.currentTime);
+            };
+            document.getElementById('comp-ratio').oninput = (e) => {
+                masteringProcessor.compNode.ratio.setValueAtTime(parseFloat(e.target.value), audioContext.currentTime);
+            };
+            document.getElementById('delay-time').oninput = (e) => {
+                masteringProcessor.delayNode.delayTime.setValueAtTime(parseInt(e.target.value, 10) / 1000, audioContext.currentTime);
+            };
+            document.getElementById('delay-feedback').oninput = (e) => {
+                masteringProcessor.delayFeedback.gain.setValueAtTime(parseInt(e.target.value, 10) / 100, audioContext.currentTime);
+            };
+            document.getElementById('reverb-decay').oninput = (e) => {
+                masteringProcessor.setReverbDecay(parseInt(e.target.value, 10) / 10);
+            };
+            document.getElementById('reverb-mix').oninput = (e) => {
+                masteringProcessor.reverbMixValue = parseInt(e.target.value, 10) / 100;
+                masteringProcessor.updateBypassGains();
+            };
+            document.getElementById('limiter-ceil').oninput = (e) => {
+                masteringProcessor.limiterNode.threshold.setValueAtTime(parseFloat(e.target.value), audioContext.currentTime);
+            };
+        }
+
         async function loadSample(instrument) {
             try {
                 const response = await fetch(`${instrument}.wav`);
@@ -835,7 +1158,6 @@
                 console.log('Rhythm patterns loaded successfully.');
             } catch (error) {
                 console.error("Failed to load rhythm patterns:", error);
-                alert("Could not load rhythm patterns. Make sure 'rhythms.json' is in the same folder as the HTML file and you are running a local server.");
             }
         }
 
@@ -848,19 +1170,17 @@
                 skinsData = await response.json();
                 console.log('Skins loaded successfully.');
                 populateSkinSelector();
-                // Apply the first skin as default
                 const firstSkinName = Object.keys(skinsData)[0];
                 if (firstSkinName) {
                     applySkin(skinsData[firstSkinName]);
                 }
             } catch (error) {
                 console.error("Failed to load skins:", error);
-                // Don't alert, as the default CSS provides a fallback.
             }
         }
 
         function populateSkinSelector() {
-            skinSelect.innerHTML = ''; // Clear existing
+            skinSelect.innerHTML = '';
             for (const skinName in skinsData) {
                 const option = document.createElement('option');
                 option.value = skinName;
@@ -962,6 +1282,7 @@
                 if (newSteps >= 4 && newSteps <= 64) {
                     sequencersData[id].steps = newSteps;
                     updateSequencerGrid(id, newSteps);
+                    renderSongStructureVisual();
                 }
             };
             header.querySelector('.time-signature-select').onchange = handleTimeSignatureChange;
@@ -984,7 +1305,7 @@
                 }
                 delete sequencersData[sequencerId];
                 document.getElementById(`sequencer-${sequencerId}`)?.remove();
-                console.log(`Removed sequencer ${sequencerId}`);
+                renderSongStructureVisual();
             }
         }
         
@@ -1064,7 +1385,6 @@
 
             const [beats, subdivision] = data.timeSignature.split('/').map(Number);
             
-            // Accents align with either time signature subdivision or tuplet count
             let stepsPerBeat = subdivision === 8 ? 2 : 4;
             if (data.tuplet && data.tuplet !== 'none') {
                 const [n, m] = data.tuplet.split(':').map(Number);
@@ -1074,7 +1394,6 @@
             }
 
             const stepsPerBar = beats * stepsPerBeat;
-
             if (stepsPerBar <= 0) return;
 
             for (let i = 0; i < data.steps; i++) {
@@ -1106,10 +1425,7 @@
         function handleExportRhythm(e) {
             const sequencerId = e.target.dataset.sequencerId;
             const data = sequencersData[sequencerId];
-            if (!data) {
-                console.error("Sequencer data not found for ID:", sequencerId);
-                return;
-            }
+            if (!data) return;
 
             const patternObject = {};
             INSTRUMENTS.forEach(instrument => {
@@ -1133,13 +1449,11 @@
 
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            
             const a = document.createElement('a');
             a.href = url;
             a.download = `rhythm-${data.name}.json`;
             document.body.appendChild(a);
             a.click();
-            
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
@@ -1152,26 +1466,23 @@
                     validateAndApplyRhythm(sequencerId, importedData);
                  } catch(error) {
                     alert(`Failed to import rhythm: ${error.message}`);
-                    console.error("Import error:", error);
                  }
             });
         }
         
         function validateAndApplyRhythm(sequencerId, importedData) {
             const patternName = Object.keys(importedData)[0];
-            if (!patternName) throw new Error("Invalid format: No top-level pattern name found.");
+            if (!patternName) throw new Error("No pattern name found.");
 
             const details = importedData[patternName];
-            if (typeof details !== 'object' || details === null) throw new Error("Invalid format: Pattern data is missing.");
+            if (typeof details !== 'object' || details === null) throw new Error("Pattern details are missing.");
             
             const { steps, timeSignature, tuplet, pattern } = details;
             
-            // Validation
-            if (typeof steps !== 'number' || steps < 4 || steps > 64) throw new Error(`Invalid 'steps' value: Must be a number between 4 and 64.`);
-            if (!VALID_TIME_SIGNATURES.includes(timeSignature)) throw new Error(`Invalid 'timeSignature' value: "${timeSignature}".`);
-            if (typeof pattern !== 'object' || pattern === null) throw new Error("Invalid format: 'pattern' property is missing or not an object.");
+            if (typeof steps !== 'number' || steps < 4 || steps > 64) throw new Error(`Invalid 'steps' value.`);
+            if (!VALID_TIME_SIGNATURES.includes(timeSignature)) throw new Error(`Invalid time signature.`);
+            if (typeof pattern !== 'object' || pattern === null) throw new Error("Pattern steps missing.");
             
-            // Apply validated data
             const data = sequencersData[sequencerId];
             data.steps = steps;
             data.timeSignature = timeSignature;
@@ -1182,18 +1493,17 @@
             for (const instrument in pattern) {
                 if (INSTRUMENTS.includes(instrument)) {
                     const stepArray = pattern[instrument];
-                    if (Array.isArray(stepArray) && stepArray.every(s => s === 0 || s === 1)) {
+                    if (Array.isArray(stepArray)) {
                         for (let i = 0; i < data.steps && i < stepArray.length; i++) {
                             data.grid[instrument][i] = stepArray[i] === 1;
                         }
-                    } else {
-                        console.warn(`Ignoring invalid step data for instrument: ${instrument}`);
                     }
                 }
             }
 
             updateSequencerGrid(sequencerId, data.steps);
-            alert(`Rhythm '${patternName}' imported successfully into sequencer ${data.name}!`);
+            renderSongStructureVisual();
+            alert(`Rhythm '${patternName}' imported successfully!`);
         }
 
         function handleInsertSequencers() {
@@ -1215,28 +1525,30 @@
                     break;
                 }
             }
+            renderSongStructureVisual();
         }
+        
         function handleNameChange(e) {
             const newName = e.target.value.toUpperCase();
             const oldName = e.target.dataset.oldName;
 
             if (!/^[A-Z]$/.test(newName)) {
-                alert(`Name must be a single letter (A-Z). Reverting.`);
+                alert(`Name must be a single letter (A-Z).`);
                 e.target.value = oldName;
                 return;
             }
 
             const isTaken = Object.values(sequencersData).some(data => data.name === newName && data.name !== oldName);
             if (isTaken) {
-                alert(`Name "${newName}" is already in use. Reverting.`);
+                alert(`Name "${newName}" is already in use.`);
                 e.target.value = oldName;
                 return;
             }
             sequencersData[e.target.dataset.sequencerId].name = newName;
             e.target.dataset.oldName = newName;
+            renderSongStructureVisual();
         }
 
-        // --- HANDLERS ---
         function handleStepChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].grid[instrument][step] = e.target.checked; }
         function handleVelocityChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].velocities[instrument][step] = parseInt(e.target.value, 10); }
         function handleLabelClick(e) {
@@ -1282,7 +1594,7 @@
             data.timeSignature = newTimeSignature;
             data.tuplet = patternData.tuplet || 'none';
 
-            updateSequencerGrid(sequencerId, newSteps); // update UI elements first
+            updateSequencerGrid(sequencerId, newSteps);
 
             INSTRUMENTS.forEach(instrument => data.grid[instrument].fill(false));
 
@@ -1295,7 +1607,8 @@
                 }
             }
             
-            updateSequencerGrid(sequencerId, newSteps); // update grid content
+            updateSequencerGrid(sequencerId, newSteps);
+            renderSongStructureVisual();
         }
 
         function handlePatternLoad(e) {
@@ -1303,7 +1616,7 @@
             if (!patternName) return;
             const sequencerId = e.target.dataset.sequencerId;
             applyPatternToSequencer(sequencerId, patternName);
-            e.target.value = ""; // Reset dropdown after selection
+            e.target.value = "";
         }
         
         function generateRandomSong() {
@@ -1317,26 +1630,24 @@
                 return;
             }
             if (availablePatterns.length === 0) {
-                alert("No rhythm patterns loaded. Cannot generate a random song.");
+                alert("No rhythm patterns loaded.");
                 return;
             }
 
-            // 1. Assign a random pattern to each existing sequencer
             sequencerIds.forEach(id => {
                 const randomPatternName = availablePatterns[Math.floor(Math.random() * availablePatterns.length)];
                 applyPatternToSequencer(id, randomPatternName);
             });
 
-            // 2. Generate the song structure
-            let songStructureString = "";
+            let songStructureString = "<"; // Prepend intro by default
             const sequencerNames = Object.values(sequencersData).map(data => data.name);
-            const numBlocks = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4 blocks
+            const numBlocks = Math.floor(Math.random() * 3) + 2;
             let availableNamesPool = [...sequencerNames];
             let lastName = null;
 
             for (let i = 0; i < numBlocks; i++) {
                 if(availableNamesPool.length === 0) {
-                    availableNamesPool = [...sequencerNames]; // Replenish if we run out
+                    availableNamesPool = [...sequencerNames];
                 }
                 
                 let chosenName;
@@ -1347,20 +1658,20 @@
                 } while (sequencerNames.length > 1 && chosenName === lastName);
                 
                 lastName = chosenName;
-                availableNamesPool.splice(nameIndex, 1); // Remove from pool to avoid immediate reuse
+                availableNamesPool.splice(nameIndex, 1);
 
-                // Build the block: 4 repeats + a fill
-                songStructureString += chosenName.repeat(4);
-                const randomFillLength = Math.floor(Math.random() * 7) + 2; // Fills of 2-8 steps
+                // Build transitions with crash accent modifiers
+                songStructureString += "+" + chosenName.repeat(4);
+                const randomFillLength = Math.floor(Math.random() * 5) + 3; // Fills of 3-7 steps
                 songStructureString += randomFillLength;
             }
-
-            // 3. Update the UI
-            songStructureInput.value = songStructureString;
             
-            // 4. Set a random tempo
-            bpm = Math.floor(Math.random() * 101) + 80; // BPM between 80 and 180
+            songStructureString += ">"; // Append outro beat
+
+            songStructureInput.value = songStructureString;
+            bpm = Math.floor(Math.random() * 101) + 80;
             tempoInput.value = bpm;
+            renderSongStructureVisual();
         }
 
         function visualizeHit(instrument) {
@@ -1372,12 +1683,11 @@
                 el.classList.add('hit');
                 setTimeout(() => {
                     el.classList.remove('hit');
-                }, 100); // Flash duration
+                }, 100);
             }
         }
         
         function liveRecordNote(instrument) {
-            // Only record if a single pattern is playing (not song mode)
             if (isPlaying && !isSongPlaying) {
                 const playingBtn = document.querySelector('.play-button.playing');
                 const sequencerId = playingBtn ? playingBtn.dataset.sequencerId : null;
@@ -1386,7 +1696,6 @@
                     const stepCheckbox = document.querySelector(`.step-checkbox[data-sequencer-id="${sequencerId}"][data-instrument="${instrument}"][data-step="${currentStep}"]`);
                     if (stepCheckbox && !stepCheckbox.checked) {
                         stepCheckbox.checked = true;
-                        // Dispatch change event to update the data model
                         stepCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 }
@@ -1407,26 +1716,27 @@
             const gainNode = audioContext.createGain();
             let finalVolume = volume * (velocity / 127) * masterVolume.value;
 
-            // Apply Velocity Humanization
             if (isHumanizeOn && velocityHumanizeAmount > 0) {
                 const velocityVariation = ((Math.random() - 0.5) * 2 * 0.2 * velocityHumanizeAmount);
                 finalVolume = Math.max(0, finalVolume + velocityVariation);
             }
             gainNode.gain.setValueAtTime(Math.min(1.0, finalVolume), scheduledTime || audioContext.currentTime);
 
-            source.connect(pannerNode).connect(gainNode).connect(audioContext.destination);
+            // Connect voices to our mastering system node if initialized, otherwise route straight to destination
+            if (masteringProcessor) {
+                source.connect(pannerNode).connect(gainNode).connect(masteringProcessor.input);
+            } else {
+                source.connect(pannerNode).connect(gainNode).connect(audioContext.destination);
+            }
 
             let timeOffset = 0;
-            // Only apply swing/timing randomization if the step is part of a pattern (not a count-in or manual trigger)
             if (step >= 0) {
                 const sixteenthNoteTime = (60.0 / bpm) / 4.0;
-                // Apply Swing
                 if (swingAmount > 0 && step % 2 !== 0) {
                     const delay = swingAmount * 2 * sixteenthNoteTime;
                     timeOffset += delay;
                 }
                 
-                // Apply Random Timing
                 if (isHumanizeOn && timingHumanizeAmount > 0) {
                     const timingVariation = (Math.random() - 0.5) * (sixteenthNoteTime * 0.5) * timingHumanizeAmount;
                     timeOffset += timingVariation;
@@ -1437,81 +1747,191 @@
             source.start(startTime);
         }
 
-        function scheduler() { while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) { scheduleNote(currentStep, nextNoteTime); nextNote(); } }
-        
-        function nextNote() {
-            const timePerStep = (60.0 / bpm) / 4.0;
-            const timePerBeat = timePerStep * 4;
-
-            if (playbackPhase === 'countingIn') {
-                nextNoteTime += timePerBeat;
-                currentStep++;
-
-                if (currentStep >= 4) {
-                    playbackPhase = 'song';
-                    currentStep = 0;
-                    
-                    const firstIdentifier = songStructure[0];
-                    if (randomFillsEnabled && /^[1-9]$/.test(firstIdentifier)) {
-                        isPlayingFill = true;
-                        fillStepCount = parseInt(firstIdentifier, 10);
-                        currentFillPattern = generateFillPattern(fillStepCount);
-                        currentSongSequencerId = Object.keys(sequencersData)[0];
-                    } else {
-                        isPlayingFill = false;
-                        const firstSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === firstIdentifier);
-                        currentSongSequencerId = firstSequencer[0];
-                    }
+        // --- NEW ARRANGEMENT PARSING & SYSTEM STATE COMPILATION ---
+        function parseSongStructure(str) {
+            const tokens = [];
+            let i = 0;
+            let applyCrashAccentNext = false;
+            let currentTransitionSteps = null;
+            
+            while (i < str.length) {
+                let char = str[i];
+                if (char === '+') {
+                    applyCrashAccentNext = true;
+                    i++;
+                    continue;
                 }
-                return;
-            }
-
-            // --- Regular Song/Pattern Logic ---
-            let activeSequencerId;
-            if (isSongPlaying) {
-                activeSequencerId = currentSongSequencerId;
-            } else {
-                const playingBtn = document.querySelector('.play-button.playing');
-                activeSequencerId = playingBtn ? playingBtn.dataset.sequencerId : null;
-            }
-
-            let currentStepDuration = timePerStep;
-            if (activeSequencerId && sequencersData[activeSequencerId]) {
-                const seq = sequencersData[activeSequencerId];
-                if (seq.tuplet && seq.tuplet !== 'none') {
-                    const [n, m] = seq.tuplet.split(':').map(Number);
-                    if (n && m) {
-                        currentStepDuration = timePerStep * (m / n);
-                    }
+                if (char === '<') {
+                    tokens.push({ type: 'intro', steps: 16, crashAccent: applyCrashAccentNext });
+                    applyCrashAccentNext = false;
+                    i++;
+                    continue;
                 }
+                if (char === '>') {
+                    tokens.push({ type: 'outro', steps: 16, crashAccent: applyCrashAccentNext });
+                    applyCrashAccentNext = false;
+                    i++;
+                    continue;
+                }
+                if (char === "'") {
+                    let j = i + 1;
+                    let tempoStr = "";
+                    while (j < str.length && str[j] !== "'") {
+                        tempoStr += str[j];
+                        j++;
+                    }
+                    const tempoVal = parseInt(tempoStr, 10);
+                    if (!isNaN(tempoVal)) {
+                        tokens.push({ type: 'tempo_change', bpm: tempoVal, transitionSteps: currentTransitionSteps });
+                    }
+                    currentTransitionSteps = null;
+                    i = j + 1;
+                    continue;
+                }
+                if (char === '*') {
+                    let j = i + 1;
+                    let stepStr = "";
+                    while (j < str.length && str[j] !== '*') {
+                        stepStr += str[j];
+                        j++;
+                    }
+                    const stepsVal = parseInt(stepStr, 10);
+                    if (!isNaN(stepsVal)) {
+                        currentTransitionSteps = stepsVal;
+                    }
+                    i = j + 1;
+                    continue;
+                }
+                if (/[A-Z]/.test(char)) {
+                    tokens.push({ type: 'pattern', name: char, crashAccent: applyCrashAccentNext });
+                    applyCrashAccentNext = false;
+                    i++;
+                    continue;
+                }
+                if (/[1-9]/.test(char)) {
+                    tokens.push({ type: 'fill', steps: parseInt(char, 10), crashAccent: applyCrashAccentNext });
+                    applyCrashAccentNext = false;
+                    i++;
+                    continue;
+                }
+                i++;
             }
+            return tokens;
+        }
 
-            nextNoteTime += currentStepDuration;
+        function compileSongBlocks(tokens) {
+            const blocks = [];
+            let currentBpm = bpm;
+            let pendingBpm = null;
+            let pendingTransition = null;
 
-            let numSteps;
-            if (isSongPlaying) {
-                if (isPlayingFill) {
-                    numSteps = fillStepCount;
+            tokens.forEach(token => {
+                if (token.type === 'tempo_change') {
+                    pendingBpm = token.bpm;
+                    pendingTransition = token.transitionSteps;
                 } else {
-                    const patternData = sequencersData[currentSongSequencerId];
-                    if (!patternData) { stop(); return; }
-                    
-                    numSteps = patternData.steps;
+                    blocks.push({
+                        type: token.type,
+                        name: token.name || null,
+                        steps: token.steps || 16,
+                        crashAccent: token.crashAccent || false,
+                        bpm: pendingBpm !== null ? pendingBpm : currentBpm,
+                        transitionSteps: pendingTransition
+                    });
+                    if (pendingBpm !== null) {
+                        currentBpm = pendingBpm;
+                        pendingBpm = null;
+                        pendingTransition = null;
+                    }
+                }
+            });
 
-                    if (currentSongSectionIndex + 1 < songStructure.length) {
-                        const nextIdentifier = songStructure[currentSongSectionIndex + 1];
-                        if (randomFillsEnabled && /^[1-9]$/.test(nextIdentifier)) {
-                            const fillLength = parseInt(nextIdentifier, 10);
-                            if (fillLength <= numSteps) {
-                                numSteps -= fillLength;
-                            }
+            // Handle step subtraction if a fill is about to follow the pattern block
+            for (let i = 0; i < blocks.length; i++) {
+                if (blocks[i].type === 'pattern' && randomFillsEnabled) {
+                    if (i + 1 < blocks.length && blocks[i + 1].type === 'fill') {
+                        const fillSteps = blocks[i + 1].steps;
+                        if (fillSteps <= blocks[i].steps) {
+                            blocks[i].steps -= fillSteps;
                         }
                     }
                 }
+            }
+            return blocks;
+        }
+
+        // Renders visual spans representing song segments
+        function renderSongStructureVisual() {
+            const container = document.getElementById('song-structure-visual');
+            container.innerHTML = '';
+            const raw = songStructureInput.value;
+            const tokens = parseSongStructure(raw);
+            const blocks = compileSongBlocks(tokens);
+            
+            blocks.forEach((block, index) => {
+                const span = document.createElement('span');
+                span.className = 'visual-block';
+                span.dataset.index = index;
+                
+                let label = "";
+                if (block.type === 'pattern') label = block.name;
+                else if (block.type === 'intro') label = '<';
+                else if (block.type === 'outro') label = '>';
+                else if (block.type === 'fill') label = `Fill(${block.steps})`;
+                
+                if (block.crashAccent) label = '+' + label;
+                if (block.transitionSteps) label += ` [BPM:${block.bpm} over *${block.transitionSteps}*]`;
+                else if (block.bpm !== bpm && (index === 0 || blocks[index-1].bpm !== block.bpm)) label += ` [BPM:${block.bpm}]`;
+                
+                span.textContent = label;
+                container.appendChild(span);
+            });
+            
+            // Re-calculate estimated total duration
+            totalSongDuration = 0;
+            let tempPreviousBpm = bpm;
+            blocks.forEach(block => {
+                const targetBpm = block.bpm;
+                const steps = block.steps;
+                const transitionSteps = block.transitionSteps;
+                for (let s = 0; s < steps; s++) {
+                    let stepBpm = targetBpm;
+                    if (transitionSteps && s < transitionSteps) {
+                        stepBpm = tempPreviousBpm + (targetBpm - tempPreviousBpm) * (s / transitionSteps);
+                    }
+                    totalSongDuration += (60.0 / stepBpm) / 4.0;
+                }
+                tempPreviousBpm = targetBpm;
+            });
+        }
+
+        function scheduler() { while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) { scheduleNote(currentStep, nextNoteTime); nextNote(); } }
+        
+        function nextNote() {
+            // Determine active step BPM (taking tempo transitions / glides into account)
+            let stepBpm = bpm;
+            if (isSongPlaying) {
+                const currentBlock = songBlocks[currentSongSectionIndex];
+                if (currentBlock) {
+                    stepBpm = currentBlock.bpm;
+                    if (currentBlock.transitionSteps && currentStep < currentBlock.transitionSteps) {
+                        stepBpm = previousBpm + (currentBlock.bpm - previousBpm) * (currentStep / currentBlock.transitionSteps);
+                    }
+                }
+            }
+
+            const timePerStep = (60.0 / stepBpm) / 4.0;
+            nextNoteTime += timePerStep;
+
+            let numSteps = 16;
+            if (isSongPlaying) {
+                const currentBlock = songBlocks[currentSongSectionIndex];
+                if (currentBlock) numSteps = currentBlock.steps;
             } else {
                 const activeId = document.querySelector('.play-button.playing')?.dataset.sequencerId;
-                if (!activeId || !sequencersData[activeId]) { stop(); return; }
-                numSteps = sequencersData[activeId].steps;
+                if (activeId && sequencersData[activeId]) {
+                    numSteps = sequencersData[activeId].steps;
+                }
             }
 
             currentStep++;
@@ -1519,27 +1939,21 @@
                 currentStep = 0;
 
                 if (isSongPlaying) {
+                    previousBpm = songBlocks[currentSongSectionIndex].bpm;
                     currentSongSectionIndex++;
-                    if (currentSongSectionIndex >= songStructure.length) {
-                        currentSongSectionIndex = 0; // Loop song.
+                    
+                    if (currentSongSectionIndex >= songBlocks.length) {
+                        currentSongSectionIndex = 0;
+                        previousBpm = bpm; // Loop song
                     }
 
-                    const newIdentifier = songStructure[currentSongSectionIndex];
-
-                    if (randomFillsEnabled && /^[1-9]$/.test(newIdentifier)) {
-                        isPlayingFill = true;
-                        fillStepCount = parseInt(newIdentifier, 10);
-                        currentFillPattern = generateFillPattern(fillStepCount);
-                    } 
-                    else {
-                        isPlayingFill = false;
-                        const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === newIdentifier);
-                        if (nextSequencer) {
-                            currentSongSequencerId = nextSequencer[0];
-                        } else {
-                            console.error(`Song section "${newIdentifier}" not found. Stopping playback.`);
-                            stop();
-                            return;
+                    const currentBlock = songBlocks[currentSongSectionIndex];
+                    if (currentBlock) {
+                        if (currentBlock.type === 'fill') {
+                            currentFillPattern = generateFillPattern(currentBlock.steps);
+                        } else if (currentBlock.type === 'pattern') {
+                            const seqEntry = Object.entries(sequencersData).find(([id, data]) => data.name === currentBlock.name);
+                            if (seqEntry) currentSongSequencerId = seqEntry[0];
                         }
                     }
                 }
@@ -1561,51 +1975,83 @@
         }
 
         function scheduleNote(step, time) {
-            if (playbackPhase === 'countingIn') {
-                if (step < 0) return;
-                
-                const hiHatInstrument = 'hi-hat-closed';
-                const settings = globalMixerSettings[hiHatInstrument];
-                playSample(hiHatInstrument, settings.volume, settings.panning, 100, time, -1);
-                return;
-            }
-
-            // --- Regular song scheduling ---
-            let activeSequencerId;
             if (isSongPlaying) {
-                activeSequencerId = currentSongSequencerId;
-            } else {
-                const playingBtn = document.querySelector('.play-button.playing');
-                activeSequencerId = playingBtn ? playingBtn.dataset.sequencerId : null;
-            }
+                const currentBlock = songBlocks[currentSongSectionIndex];
+                if (!currentBlock) return;
 
-            if(!activeSequencerId || !sequencersData[activeSequencerId]) return;
-            
-            const data = sequencersData[activeSequencerId];
-            const gridToUse = (isSongPlaying && isPlayingFill) ? currentFillPattern : data.grid;
-
-            INSTRUMENTS.forEach(instrument => {
-                if (gridToUse && gridToUse[instrument] && gridToUse[instrument][step]) {
-                    const velocity = data.velocities[instrument][step];
-                    const settings = globalMixerSettings[instrument];
-                    playSample(instrument, settings.volume, settings.panning, velocity, time, step);
-                    if (currentMidiOutput && INSTRUMENT_MIDI_NOTES[instrument]) {
-                        const note = INSTRUMENT_MIDI_NOTES[instrument];
-                        const channel = 9;
-                        const noteOnMessage = [0x90 + channel, note, velocity];
-                        const noteOffMessage = [0x80 + channel, note, 0];
-                        const noteDuration = 200;
-                        const sendTime = window.performance.now() + (time - audioContext.currentTime) * 1000;
-                        currentMidiOutput.send(noteOnMessage, sendTime);
-                        currentMidiOutput.send(noteOffMessage, sendTime + noteDuration);
+                // 1. Intro state handling
+                if (currentBlock.type === 'intro') {
+                    if (step === 0 || step === 4 || step === 8 || step === 12) {
+                        const settings = globalMixerSettings['hi-hat-open'];
+                        playSample('hi-hat-open', settings.volume, settings.panning, 100, time, -1);
                     }
+                    setTimeout(() => updatePlayhead(-1, null), (time - audioContext.currentTime) * 1000);
+                    return;
                 }
-            });
-            
-            if (!isPlayingFill) {
-                setTimeout(() => updatePlayhead(step, activeSequencerId), (time - audioContext.currentTime) * 1000);
+
+                // 2. Outro state handling
+                if (currentBlock.type === 'outro') {
+                    if (step === 0) {
+                        const kickSet = globalMixerSettings['kick'];
+                        const crashSet = globalMixerSettings['crash1'];
+                        playSample('kick', kickSet.volume, kickSet.panning, 110, time, -1);
+                        playSample('crash1', crashSet.volume, crashSet.panning, 120, time, -1);
+                    }
+                    setTimeout(() => updatePlayhead(-1, null), (time - audioContext.currentTime) * 1000);
+                    return;
+                }
+
+                // 3. Fills & Pattern triggers
+                let gridToUse = null;
+                if (currentBlock.type === 'fill') {
+                    gridToUse = currentFillPattern;
+                } else if (currentBlock.type === 'pattern') {
+                    const seq = Object.values(sequencersData).find(s => s.name === currentBlock.name);
+                    if (seq) gridToUse = seq.grid;
+                }
+
+                if (!gridToUse) return;
+
+                let suppressCymbals = false;
+                if (step === 0 && currentBlock.crashAccent) {
+                    suppressCymbals = true;
+                    const crashSet = globalMixerSettings['crash1'];
+                    playSample('crash1', crashSet.volume, crashSet.panning, 127, time, step);
+                }
+
+                INSTRUMENTS.forEach(instrument => {
+                    if (gridToUse[instrument] && gridToUse[instrument][step]) {
+                        if (suppressCymbals && ['crash1', 'crash2', 'ride', 'china', 'hi-hat-open', 'hi-hat-closed'].includes(instrument)) {
+                            return;
+                        }
+                        const settings = globalMixerSettings[instrument];
+                        const seq = Object.values(sequencersData).find(s => s.name === currentBlock.name);
+                        const velocity = (seq && seq.velocities[instrument]) ? seq.velocities[instrument][step] : 100;
+                        playSample(instrument, settings.volume, settings.panning, velocity, time, step);
+                    }
+                });
+
+                if (currentBlock.type === 'pattern') {
+                    setTimeout(() => updatePlayhead(step, currentSongSequencerId), (time - audioContext.currentTime) * 1000);
+                } else {
+                    setTimeout(() => updatePlayhead(-1, null), (time - audioContext.currentTime) * 1000);
+                }
+
             } else {
-                 setTimeout(() => updatePlayhead(-1, null), (time - audioContext.currentTime) * 1000);
+                // Single pattern play schedule
+                const playingBtn = document.querySelector('.play-button.playing');
+                const activeSequencerId = playingBtn ? playingBtn.dataset.sequencerId : null;
+                if (!activeSequencerId || !sequencersData[activeSequencerId]) return;
+
+                const data = sequencersData[activeSequencerId];
+                INSTRUMENTS.forEach(instrument => {
+                    if (data.grid[instrument] && data.grid[instrument][step]) {
+                        const velocity = data.velocities[instrument][step];
+                        const settings = globalMixerSettings[instrument];
+                        playSample(instrument, settings.volume, settings.panning, velocity, time, step);
+                    }
+                });
+                setTimeout(() => updatePlayhead(step, activeSequencerId), (time - audioContext.currentTime) * 1000);
             }
         }
 
@@ -1641,18 +2087,20 @@
              isSongPlaying = isSongMode;
              
              if (isSongMode) {
-                 playbackPhase = isCountInEnabled ? 'countingIn' : 'song';
+                 playbackPhase = 'song';
                  songPlayBtn.classList.add('playing');
                  songPlayBtn.textContent = 'Song Stop';
              } else {
-                 playbackPhase = 'song'; // No count-in for single pattern play
+                 playbackPhase = 'song';
                  const playBtn = document.querySelector(`.play-button[data-sequencer-id="${sequencerId}"]`);
                  if (playBtn) { playBtn.classList.add('playing'); playBtn.textContent = 'Stop'; }
              }
              
-             currentStep = -1; // Always start at -1 so first increment is 0
+             currentStep = -1;
              nextNoteTime = audioContext.currentTime;
+             previousBpm = bpm;
              schedulerTimerID = setInterval(scheduler, 25.0);
+             requestAnimationFrame(updateDisplayLoop);
         }
 
         function stop() {
@@ -1671,6 +2119,105 @@
 
             updatePlayhead(-1, null);
             currentStep = 0;
+            updateDisplayLoop(); // reset visual timers
+        }
+
+        // --- REAL-TIME TIMER DISPLAY METRICS LOOP ---
+        function updateDisplayLoop() {
+            if (!isPlaying) {
+                document.getElementById('display-active-seq').textContent = '-';
+                document.getElementById('display-seq-time').textContent = '0:00.0 / 0:00.0';
+                document.getElementById('display-song-time').textContent = '0:00.0 / 0:00.0';
+                document.querySelectorAll('#song-structure-visual .visual-block').forEach(el => el.classList.remove('active'));
+                return;
+            }
+            requestAnimationFrame(updateDisplayLoop);
+            
+            let activeName = '-';
+            let seqDuration = 0.0;
+            let currentSeqTime = 0.0;
+            
+            if (isSongPlaying) {
+                const currentBlock = songBlocks[currentSongSectionIndex];
+                if (currentBlock) {
+                    if (currentBlock.type === 'pattern') activeName = currentBlock.name;
+                    else if (currentBlock.type === 'intro') activeName = '<';
+                    else if (currentBlock.type === 'outro') activeName = '>';
+                    else if (currentBlock.type === 'fill') activeName = 'Fill';
+
+                    const currentBlockBpm = currentBlock.bpm;
+                    const stepDur = (60.0 / currentBlockBpm) / 4.0;
+                    seqDuration = currentBlock.steps * stepDur;
+                    currentSeqTime = currentStep * stepDur;
+                }
+                
+                // Highlight visual arrangement blocks corresponding to active index
+                document.querySelectorAll('#song-structure-visual .visual-block').forEach((el, index) => {
+                    if (index === currentSongSectionIndex) {
+                        el.classList.add('active');
+                    } else {
+                        el.classList.remove('active');
+                    }
+                });
+                
+                // Calculate total elapsed song time
+                let elapsed = 0.0;
+                let tempPreviousBpm = bpm;
+                for (let b = 0; b < currentSongSectionIndex; b++) {
+                    const block = songBlocks[b];
+                    const targetBpm = block.bpm;
+                    const steps = block.steps;
+                    const transitionSteps = block.transitionSteps;
+                    for (let s = 0; s < steps; s++) {
+                        let stepBpm = targetBpm;
+                        if (transitionSteps && s < transitionSteps) {
+                            stepBpm = tempPreviousBpm + (targetBpm - tempPreviousBpm) * (s / transitionSteps);
+                        }
+                        elapsed += (60.0 / stepBpm) / 4.0;
+                    }
+                    tempPreviousBpm = targetBpm;
+                }
+                
+                // Add current block progress
+                if (currentBlock) {
+                    const targetBpm = currentBlock.bpm;
+                    const transitionSteps = currentBlock.transitionSteps;
+                    for (let s = 0; s < currentStep; s++) {
+                        let stepBpm = targetBpm;
+                        if (transitionSteps && s < transitionSteps) {
+                            stepBpm = previousBpm + (targetBpm - previousBpm) * (s / transitionSteps);
+                        }
+                        elapsed += (60.0 / stepBpm) / 4.0;
+                    }
+                }
+                
+                document.getElementById('display-active-seq').textContent = activeName;
+                document.getElementById('display-seq-time').textContent = `${formatTime(currentSeqTime)} / ${formatTime(seqDuration)}`;
+                document.getElementById('display-song-time').textContent = `${formatTime(elapsed)} / ${formatTime(totalSongDuration)}`;
+            } else {
+                // Single pattern monitoring metrics
+                const playingBtn = document.querySelector('.play-button.playing');
+                const id = playingBtn?.dataset.sequencerId;
+                if (id && sequencersData[id]) {
+                    const seq = sequencersData[id];
+                    activeName = seq.name;
+                    const stepDur = (60.0 / bpm) / 4.0;
+                    seqDuration = seq.steps * stepDur;
+                    currentSeqTime = currentStep * stepDur;
+                    
+                    document.getElementById('display-active-seq').textContent = activeName;
+                    document.getElementById('display-seq-time').textContent = `${formatTime(currentSeqTime)} / ${formatTime(seqDuration)}`;
+                    document.getElementById('display-song-time').textContent = `${formatTime(currentSeqTime)} / ${formatTime(seqDuration)}`;
+                }
+            }
+        }
+        
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return "0:00.0";
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            const tenths = Math.floor((seconds % 1) * 10);
+            return `${mins}:${secs.toString().padStart(2, '0')}.${tenths}`;
         }
 
         function playSong() {
@@ -1679,34 +2226,36 @@
                 return;
             }
             try {
-                const structureStr = songStructureInput.value;
-                if(!structureStr) { alert('Please enter a song structure (e.g., AB1AB2C).'); return; }
+                const raw = songStructureInput.value;
+                if(!raw) { alert('Please enter a song structure (e.g., <+A4B>).'); return; }
 
-                songStructure = [...structureStr];
-                
-                const firstSectionIdentifier = songStructure[0];
-                let firstSequencerEntry;
+                const tokens = parseSongStructure(raw);
+                songBlocks = compileSongBlocks(tokens);
 
-                if (/^[A-Z]$/.test(firstSectionIdentifier)) {
-                     firstSequencerEntry = Object.entries(sequencersData).find(([id, data]) => data.name === firstSectionIdentifier);
-                     if (!firstSequencerEntry) throw new Error(`The first section "${firstSectionIdentifier}" does not match any existing sequencers.`);
-                } else if (/^[1-9]$/.test(firstSectionIdentifier)) {
-                    if (Object.keys(sequencersData).length > 0) {
-                        firstSequencerEntry = Object.entries(sequencersData)[0];
-                    } else {
-                        throw new Error(`Cannot start a song with a fill because no sequencers exist to provide sounds.`);
-                    }
-                } else {
-                     throw new Error(`The first item in the song structure "${firstSectionIdentifier}" is not a valid section or fill.`);
+                if (!songBlocks.length) {
+                    throw new Error("No playable segments parsed.");
                 }
                 
-                if (firstSequencerEntry) {
-                    currentSongSequencerId = firstSequencerEntry[0]; // Set initial sequencer for reference
+                currentSongSectionIndex = 0;
+                previousBpm = bpm;
+
+                const firstBlock = songBlocks[0];
+                if (firstBlock.type === 'intro' || firstBlock.type === 'outro' || firstBlock.type === 'fill') {
+                    if (firstBlock.type === 'fill') {
+                        currentFillPattern = generateFillPattern(firstBlock.steps);
+                    }
                     togglePlay(null, true);
+                } else if (firstBlock.type === 'pattern') {
+                    const nextSequencer = Object.entries(sequencersData).find(([id, data]) => data.name === firstBlock.name);
+                    if (nextSequencer) {
+                        currentSongSequencerId = nextSequencer[0];
+                        togglePlay(null, true);
+                    } else {
+                        throw new Error(`Sequencer pattern "${firstBlock.name}" not found.`);
+                    }
                 }
             } catch(error) {
-                console.error("Error starting song playback:", error);
-                alert("Error starting song playback: " + error.message);
+                alert("Playback aborted: " + error.message);
                 stop();
             }
         }
@@ -1721,19 +2270,20 @@
                 const average = (tapTimes[tapTimes.length - 1] - tapTimes[0]) / (tapTimes.length - 1);
                 bpm = Math.max(20, Math.min(300, Math.round(60000 / average)));
                 tempoInput.value = bpm;
+                renderSongStructureVisual();
             }
         }
         
         function initMidi() {
             if (navigator.requestMIDIAccess) navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
-            else alert("Web MIDI API is not supported in this browser.");
+            else alert("Web MIDI API is not supported.");
         }
         function onMIDISuccess(m) {
             midiAccess = m;
             midiInSelect.innerHTML = midiAccess.inputs.size > 0 ? '<option value="">Select MIDI Input...</option>' + [...midiAccess.inputs.values()].map(i => `<option value="${i.id}">${i.name}</option>`).join('') : '<option>No MIDI Input</option>';
             midiOutSelect.innerHTML = midiAccess.outputs.size > 0 ? '<option value="">Select MIDI Output...</option>' + [...midiAccess.outputs.values()].map(o => `<option value="${o.id}">${o.name}</option>`).join('') : '<option>No MIDI Output</option>';
         }
-        function onMIDIFailure(msg) { console.error(`Failed to get MIDI access - ${msg}`); alert(`Failed to get MIDI access.`); }
+        function onMIDIFailure(msg) { console.error(`MIDI failure - ${msg}`); }
         function selectMidiInput(e) {
             if (currentMidiInput) currentMidiInput.onmidimessage = null;
             currentMidiInput = e.target.value ? midiAccess.inputs.get(e.target.value) : null;
@@ -1742,7 +2292,7 @@
         async function handleMidiMessage(message) {
             await initAudio();
             const [command, note, velocity] = message.data;
-            if ((command & 0xF0) === 0x90 && velocity > 0) { // Note On
+            if ((command & 0xF0) === 0x90 && velocity > 0) {
                 const instrument = midiNoteToInstrumentMap[note];
                 if (instrument) {
                     const settings = globalMixerSettings[instrument] || { volume: 0.8, panning: 0 };
@@ -1755,7 +2305,7 @@
         async function loadExampleSongs() {
             try {
                 const response = await fetch('songs.json');
-                if (!response.ok) throw new Error(`Could not load songs.json. Status: ${response.status}`);
+                if (!response.ok) throw new Error(`Could not load songs.json`);
                 exampleSongsData = await response.json();
                 
                 for (const songName in exampleSongsData) {
@@ -1773,6 +2323,7 @@
             if(isPlaying) stop();
             sequencersContainer.innerHTML = '';
             sequencersData = {};
+            renderSongStructureVisual();
         }
 
         function handleLoadExampleSong(e) {
@@ -1783,28 +2334,19 @@
             clearAllSequencers();
             
             const songData = exampleSongsData[songName];
-            if (!songData) {
-                console.error(`Could not find song data for "${songName}"`);
-                return;
-            }
+            if (!songData) return;
 
-            // Create all necessary sequencer patterns first
             if (songData.patterns) {
                 for (const patternName in songData.patterns) {
                      createSequencer(patternName, patternName);
                 }
             }
             
-            // Now populate them with data
             if (songData.patterns) {
                 for (const patternName in songData.patterns) {
                     const patternDetails = songData.patterns[patternName];
                     const data = sequencersData[patternName];
-
-                    if (!data) {
-                         console.warn(`Sequencer "${patternName}" was not created. Skipping pattern load.`);
-                         continue;
-                    }
+                    if (!data) continue;
                     
                     data.steps = patternDetails.steps || 16;
                     data.timeSignature = patternDetails.timeSignature || '4/4';
@@ -1825,13 +2367,13 @@
             tempoInput.value = songData.bpm;
             bpm = songData.bpm;
             songStructureInput.value = songData.structure;
-
+            renderSongStructureVisual();
             e.target.value = "";
         }
 
         function createGlobalMixerPanel() {
             const panel = document.getElementById('global-mix-panel');
-            panel.innerHTML = ''; // Clear previous content
+            panel.innerHTML = '';
 
             INSTRUMENTS.forEach(instrument => {
                 const settings = globalMixerSettings[instrument] || { volume: 0.8, panning: 0 };
@@ -1848,7 +2390,6 @@
                 panel.appendChild(strip);
             });
 
-            // Add event listeners
             panel.querySelectorAll('.global-volume-slider').forEach(slider => {
                 slider.addEventListener('input', (e) => {
                     const instrument = e.target.dataset.instrument;
@@ -1876,10 +2417,9 @@
                             try {
                                 const arrayBuffer = readEvent.target.result;
                                 audioBuffers[instrument] = await audioContext.decodeAudioData(arrayBuffer);
-                                alert(`Successfully loaded custom sample for ${instrument.replace(/-/g, ' ')}!`);
+                                alert(`Custom sample loaded for ${instrument.replace(/-/g, ' ')}!`);
                             } catch (err) {
-                                console.error("Decode error: ", err);
-                                alert("Could not decode audio file. Make sure it is a valid audio format.");
+                                alert("Audio decoding failed.");
                             }
                         };
                         reader.readAsArrayBuffer(file);
@@ -1889,7 +2429,6 @@
             });
         }
         
-        // --- IMPORT/EXPORT/SESSION ---
         function promptForFile(callback) {
             const input = document.createElement('input');
             input.type = 'file';
@@ -1946,29 +2485,25 @@
             promptForFile(fileContent => {
                 try {
                     const songData = JSON.parse(fileContent);
-                    
-                    // Validate Song Data
                     if (typeof songData.bpm !== 'number' || songData.bpm < 20 || songData.bpm > 300) throw new Error("Invalid BPM.");
-                    if (typeof songData.structure !== 'string') throw new Error("Missing or invalid song structure.");
-                    if (typeof songData.patterns !== 'object' || songData.patterns === null) throw new Error("Missing patterns object.");
+                    if (typeof songData.structure !== 'string') throw new Error("Invalid song structure.");
+                    if (typeof songData.patterns !== 'object' || songData.patterns === null) throw new Error("Missing patterns.");
                     
                     stop();
                     clearAllSequencers();
                     
-                    // Apply data
                     bpm = songData.bpm;
                     tempoInput.value = bpm;
                     songStructureInput.value = songData.structure;
 
                     for (const name in songData.patterns) {
-                        createSequencer(name, name); // Create with ID and name being the same
+                        createSequencer(name, name);
                         validateAndApplyRhythm(name, { [name]: songData.patterns[name] });
                     }
+                    renderSongStructureVisual();
                     alert("Song imported successfully!");
-
                 } catch (error) {
-                    alert(`Failed to import song: ${error.message}`);
-                    console.error("Song import error:", error);
+                    alert(`Import Failed: ${error.message}`);
                 }
             });
         }
@@ -2002,20 +2537,16 @@
             promptForFile(fileContent => {
                  try {
                     const sessionData = JSON.parse(fileContent);
-
-                    // --- Validation ---
-                    if (sessionData.version !== 1) throw new Error("Incompatible session version.");
+                    if (sessionData.version !== 1) throw new Error("Incompatible version.");
                     if (typeof sessionData.bpm !== 'number' || sessionData.bpm < 20 || sessionData.bpm > 300) throw new Error("Invalid BPM.");
-                    if (typeof sessionData.isHumanizeOn !== 'boolean') throw new Error("Invalid humanize setting.");
-                    if (typeof sessionData.sequencersData !== 'object') throw new Error("Missing sequencers data.");
+                    if (typeof sessionData.isHumanizeOn !== 'boolean') throw new Error("Invalid Humanizer option.");
+                    if (typeof sessionData.sequencersData !== 'object') throw new Error("Sequencer data missing.");
 
                     stop();
                     clearAllSequencers();
 
-                    // --- Apply State ---
                     bpm = sessionData.bpm;
                     tempoInput.value = bpm;
-                    
                     songStructureInput.value = sessionData.songStructure;
                     
                     isHumanizeOn = sessionData.isHumanizeOn;
@@ -2041,14 +2572,13 @@
                     randomFillsBtn.textContent = randomFillsEnabled ? "Fills ON" : "Fills OFF";
 
                     globalMixerSettings = sessionData.globalMixerSettings;
-                    createGlobalMixerPanel(); // Re-creates sliders with loaded values
+                    createGlobalMixerPanel();
 
-                    // Re-create sequencers
                     sequencersData = sessionData.sequencersData;
                     for (const id in sequencersData) {
                         const seqData = sequencersData[id];
-                        createSequencer(id, seqData.name); // Creates empty one
-                        sequencersData[id] = seqData; // Overwrite with loaded data
+                        createSequencer(id, seqData.name);
+                        sequencersData[id] = seqData;
                         updateSequencerGrid(id, seqData.steps);
                     }
 
@@ -2057,23 +2587,28 @@
                         applySkin(skinsData[sessionData.skinName]);
                     }
 
+                    renderSongStructureVisual();
                     alert("Session loaded successfully!");
-
                  } catch(error) {
-                    alert(`Failed to load session: ${error.message}`);
-                    console.error("Session load error:", error);
+                    alert(`Load failed: ${error.message}`);
                  }
             });
         }
-
 
         // --- INITIALIZATION ---
         await loadSkins();
         await loadRhythmPatterns();
 
-        tempoInput.addEventListener('change', (e) => bpm = parseInt(e.target.value, 10));
+        tempoInput.addEventListener('change', (e) => {
+            bpm = parseInt(e.target.value, 10);
+            renderSongStructureVisual();
+        });
         tapTempoBtn.addEventListener('click', tapTempo);
-        humanizeBtn.addEventListener('click', () => { isHumanizeOn = !isHumanizeOn; humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF"; humanizeBtn.classList.toggle('toggled-on', isHumanizeOn); });
+        humanizeBtn.addEventListener('click', () => { 
+            isHumanizeOn = !isHumanizeOn; 
+            humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF"; 
+            humanizeBtn.classList.toggle('toggled-on', isHumanizeOn); 
+        });
         timingHumanizeSlider.addEventListener('input', (e) => {
             timingHumanizeAmount = parseFloat(e.target.value);
             e.target.previousElementSibling.querySelector('output').value = Math.round(timingHumanizeAmount * 100);
@@ -2089,13 +2624,15 @@
         insertSequencersBtn.addEventListener('click', handleInsertSequencers);
         songPlayBtn.addEventListener('click', playSong);
         songStructureInput.addEventListener('input', (e) => {
-            const sanitizedValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const sanitizedValue = e.target.value.toUpperCase().replace(/[^A-Z0-9<>+*']/g, '');
             if (e.target.value !== sanitizedValue) e.target.value = sanitizedValue;
+            renderSongStructureVisual();
         });
         randomFillsBtn.addEventListener('click', () => {
             randomFillsEnabled = !randomFillsEnabled;
             randomFillsBtn.textContent = randomFillsEnabled ? "Fills ON" : "Fills OFF";
             randomFillsBtn.classList.toggle('toggled-on', randomFillsEnabled);
+            renderSongStructureVisual();
         });
         countInBtn.addEventListener('click', () => {
             isCountInEnabled = !isCountInEnabled;
@@ -2117,8 +2654,22 @@
         });
 
         document.getElementById('export-song-wav-btn').addEventListener('click', async () => {
-            // Force user to load samples if they haven't run audioContext yet
             await initAudio();
+            
+            // Collate currently selected Mastering FX parameters
+            const masteringSettings = masteringProcessor ? {
+                states: { ...masteringProcessor.states },
+                satDrive: parseInt(document.getElementById('sat-drive').value, 10),
+                satMix: parseInt(document.getElementById('sat-mix').value, 10) / 100,
+                compThresh: parseFloat(document.getElementById('comp-thresh').value),
+                compRatio: parseFloat(document.getElementById('comp-ratio').value),
+                delayTime: parseInt(document.getElementById('delay-time').value, 10) / 1000,
+                delayFeedback: parseInt(document.getElementById('delay-feedback').value, 10) / 100,
+                reverbDecay: parseInt(document.getElementById('reverb-decay').value, 10) / 10,
+                reverbMix: parseInt(document.getElementById('reverb-mix').value, 10) / 100,
+                limiterCeil: parseFloat(document.getElementById('limiter-ceil').value)
+            } : null;
+
             SongDrumMachineExporter.exportWav({
                 songStructure: songStructureInput.value,
                 sequencersData: sequencersData,
@@ -2131,7 +2682,8 @@
                 isHumanizeOn: isHumanizeOn,
                 timingHumanizeAmount: timingHumanizeAmount,
                 velocityHumanizeAmount: velocityHumanizeAmount,
-                swingAmount: swingAmount
+                swingAmount: swingAmount,
+                masteringSettings: masteringSettings
             });
         });
 
@@ -2140,7 +2692,6 @@
         midiOutSelect.onchange = (e) => {
             const deviceId = e.target.value;
             currentMidiOutput = deviceId ? midiAccess.outputs.get(deviceId) : null;
-            console.log(currentMidiOutput ? `MIDI Output selected: ${currentMidiOutput.name}` : 'MIDI Output deselected.');
         };
         exampleSongSelect.addEventListener('change', handleLoadExampleSong);
         
@@ -2155,12 +2706,19 @@
             panel.classList.toggle('hidden');
             toggleVisualizerBtn.textContent = panel.classList.contains('hidden') ? 'Show Live Monitor' : 'Hide Live Monitor';
         });
+        toggleMasteringBtn.addEventListener('click', () => {
+            const panel = document.getElementById('mastering-panel');
+            panel.classList.toggle('hidden');
+            toggleMasteringBtn.textContent = panel.classList.contains('hidden') ? 'Show Mastering Processor' : 'Hide Mastering Processor';
+        });
+        infoBtn.addEventListener('click', () => {
+            if (window.DrumMachineInfo) window.DrumMachineInfo.show();
+        });
 
-        // Live Performance Inputs
+        // Key Down Performance Inputs
         document.addEventListener('keydown', async (e) => {
-            // Do not trigger if user is typing in an input field
             if (e.target.matches('input[type="text"], input[type="number"]')) return;
-            if (e.repeat) return; // Prevent continuous firing on key hold
+            if (e.repeat) return;
             const instrument = KEY_MAP[e.key.toLowerCase()];
             if (instrument) {
                 e.preventDefault();
@@ -2194,6 +2752,7 @@
         createGlobalMixerPanel();
         createSequencer('A', 'A');
         await loadExampleSongs();
+        renderSongStructureVisual();
     });
     </script>
 
