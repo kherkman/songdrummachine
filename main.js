@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 2. Define the restoration loader (call this during initialization)
+    // 2. Define the restoration loader (called during initialization)
     function loadAutoSave() {
         const saved = localStorage.getItem('drum_sequencer_autosave');
         if (!saved) return false;
@@ -291,6 +291,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             timingHumanizeSlider.value = timingHumanizeAmount;
             velocityHumanizeSlider.value = velocityHumanizeAmount;
             swingSlider.value = swingAmount;
+
+            // Dispatch visual percentage events
+            timingHumanizeSlider.dispatchEvent(new Event('input'));
+            velocityHumanizeSlider.dispatchEvent(new Event('input'));
+            swingSlider.dispatchEvent(new Event('input'));
 
             isCountInEnabled = sessionData.isCountInEnabled;
             countInBtn.classList.toggle('toggled-on', isCountInEnabled);
@@ -326,14 +331,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return false;
         }
     }
-
-    // 3. Register Auto-Save triggers to all state modifications
-    // Map 'triggerAutoSave()' call to:
-    // - Step checkbox 'onchange'
-    // - Velocity slider 'oninput'
-    // - Slider value changes (Volume, Panning, Humanizer, Swing)
-    // - Tempo and Song Structure 'onchange' or 'oninput'
-    // - Adding/removing sequencers or custom instruments
 
     // 4. Bind the "Reset Everything" button in main.js
     document.getElementById('reset-everything-btn').addEventListener('click', () => {
@@ -494,12 +491,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 sequencersData[id].steps = newSteps;
                 updateSequencerGrid(id, newSteps);
                 renderSongStructureVisual();
+                triggerAutoSave();
             }
         };
         header.querySelector('.time-signature-select').onchange = handleTimeSignatureChange;
         header.querySelector('.tuplet-select').onchange = (e) => {
             sequencersData[id].tuplet = e.target.value;
             updateBarHighlighting(id);
+            triggerAutoSave();
         };
         header.querySelector('.pattern-select').onchange = handlePatternLoad;
         header.querySelector('.rnd-all-btn').onclick = () => randomizeSequencer(id);
@@ -517,6 +516,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             delete sequencersData[sequencerId];
             document.getElementById(`sequencer-${sequencerId}`)?.remove();
             renderSongStructureVisual();
+            triggerAutoSave();
         }
     }
     
@@ -581,6 +581,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newSignature = e.target.value;
         sequencersData[sequencerId].timeSignature = newSignature;
         updateBarHighlighting(sequencerId);
+        triggerAutoSave();
     }
 
     function updateBarHighlighting(sequencerId) {
@@ -714,6 +715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         updateSequencerGrid(sequencerId, data.steps);
         renderSongStructureVisual();
+        triggerAutoSave();
         alert(`Rhythm '${patternName}' loaded successfully!`);
     }
 
@@ -737,6 +739,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         renderSongStructureVisual();
+        triggerAutoSave();
     }
     
     function handleNameChange(e) {
@@ -758,10 +761,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         sequencersData[e.target.dataset.sequencerId].name = newName;
         e.target.dataset.oldName = newName;
         renderSongStructureVisual();
+        triggerAutoSave();
     }
 
-    function handleStepChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].grid[instrument][step] = e.target.checked; }
-    function handleVelocityChange(e) { const { step, instrument, sequencerId } = e.target.dataset; sequencersData[sequencerId].velocities[instrument][step] = parseInt(e.target.value, 10); }
+    function handleStepChange(e) { 
+        const { step, instrument, sequencerId } = e.target.dataset; 
+        sequencersData[sequencerId].grid[instrument][step] = e.target.checked; 
+        triggerAutoSave();
+    }
+    
+    function handleVelocityChange(e) { 
+        const { step, instrument, sequencerId } = e.target.dataset; 
+        sequencersData[sequencerId].velocities[instrument][step] = parseInt(e.target.value, 10); 
+        triggerAutoSave();
+    }
     
     function handleLabelClick(e) {
         const { instrument } = e.target.dataset;
@@ -782,18 +795,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             data.grid[instrument][i] = Math.random() > 0.6;
         }
         updateSequencerGrid(sequencerId, data.steps);
+        triggerAutoSave();
     }
     
     function handleClearRow(e) {
         const { instrument, sequencerId } = e.target.dataset;
         sequencersData[sequencerId].grid[instrument].fill(false);
         updateSequencerGrid(sequencerId, sequencersData[sequencerId].steps);
+        triggerAutoSave();
     }
     
     function randomizeSequencer(sequencerId) {
          const data = sequencersData[sequencerId];
          INSTRUMENTS.forEach(instrument => data.grid[instrument].forEach((_, i) => data.grid[instrument][i] = Math.random() > 0.7));
          updateSequencerGrid(sequencerId, data.steps);
+         triggerAutoSave();
     }
     
     function applyPatternToSequencer(sequencerId, patternName) {
@@ -825,6 +841,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         updateSequencerGrid(sequencerId, newSteps);
         renderSongStructureVisual();
+        triggerAutoSave();
     }
 
     function handlePatternLoad(e) {
@@ -888,6 +905,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         bpm = Math.floor(Math.random() * 101) + 80;
         tempoInput.value = bpm;
         renderSongStructureVisual();
+        triggerAutoSave();
     }
 
     function visualizeHit(instrument) {
@@ -1510,6 +1528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             bpm = Math.max(20, Math.min(300, Math.round(60000 / average)));
             tempoInput.value = bpm;
             renderSongStructureVisual();
+            triggerAutoSave();
         }
     }
     
@@ -1600,6 +1619,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         bpm = songData.bpm;
         songStructureInput.value = songData.structure;
         renderSongStructureVisual();
+        triggerAutoSave();
         e.target.value = "";
     }
 
@@ -1645,12 +1665,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             slider.addEventListener('input', (e) => {
                 const instrument = e.target.dataset.instrument;
                 globalMixerSettings[instrument].volume = parseFloat(e.target.value);
+                triggerAutoSave();
             });
         });
         panel.querySelectorAll('.global-panning-slider').forEach(slider => {
             slider.addEventListener('input', (e) => {
                 const instrument = e.target.dataset.instrument;
                 globalMixerSettings[instrument].panning = parseFloat(e.target.value);
+                triggerAutoSave();
             });
         });
         
@@ -1700,6 +1722,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 loadedCount++;
                                 if (loadedCount === files.length) {
                                     updateInstrumentLabels();
+                                    triggerAutoSave();
                                     alert(`Loaded ${files.length} custom sample(s) for ${baseName}!`);
                                 }
                             } catch (err) {
@@ -1736,6 +1759,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         createGlobalMixerPanel();
         updateAllSequencerGrids();
         renderSongStructureVisual();
+        triggerAutoSave();
     }
 
     function removeCustomInstrumentFromState(id) {
@@ -1752,6 +1776,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             delete sequencersData[seqId].grid[id];
             delete sequencersData[seqId].velocities[id];
         }
+        triggerAutoSave();
     }
 
     function updateAllSequencerGrids() {
@@ -1870,6 +1895,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             createGlobalMixerPanel();
             updateAllSequencerGrids();
             renderSongStructureVisual();
+            triggerAutoSave();
             
             alert("Sample set imported successfully!");
         } catch (err) {
@@ -1950,6 +1976,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     validateAndApplyRhythm(name, { [name]: songData.patterns[name] });
                 }
                 renderSongStructureVisual();
+                triggerAutoSave();
                 alert("Song imported successfully!");
             } catch (error) {
                 alert(`Import Failed: ${error.message}`);
@@ -2042,6 +2069,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 renderSongStructureVisual();
+                triggerAutoSave();
                 alert("Session loaded successfully!");
              } catch(error) {
                 alert(`Load failed: ${error.message}`);
@@ -2056,24 +2084,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     tempoInput.addEventListener('change', (e) => {
         bpm = parseInt(e.target.value, 10);
         renderSongStructureVisual();
+        triggerAutoSave();
     });
     tapTempoBtn.addEventListener('click', tapTempo);
     humanizeBtn.addEventListener('click', () => { 
         isHumanizeOn = !isHumanizeOn; 
         humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF"; 
         humanizeBtn.classList.toggle('toggled-on', isHumanizeOn); 
+        triggerAutoSave();
     });
     timingHumanizeSlider.addEventListener('input', (e) => {
         timingHumanizeAmount = parseFloat(e.target.value);
         e.target.previousElementSibling.querySelector('output').value = Math.round(timingHumanizeAmount * 100);
+        triggerAutoSave();
     });
     velocityHumanizeSlider.addEventListener('input', (e) => {
         velocityHumanizeAmount = parseFloat(e.target.value);
         e.target.previousElementSibling.querySelector('output').value = Math.round(velocityHumanizeAmount * 100);
+        triggerAutoSave();
     });
     swingSlider.addEventListener('input', (e) => {
         swingAmount = parseFloat(e.target.value);
         e.target.previousElementSibling.querySelector('output').value = Math.round((0.5 + swingAmount) * 100);
+        triggerAutoSave();
     });
     insertSequencersBtn.addEventListener('click', handleInsertSequencers);
     songPlayBtn.addEventListener('click', playSong);
@@ -2081,17 +2114,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         const sanitizedValue = e.target.value.toUpperCase().replace(/[^A-Z0-9<>+*']/g, '');
         if (e.target.value !== sanitizedValue) e.target.value = sanitizedValue;
         renderSongStructureVisual();
+        triggerAutoSave();
     });
     randomFillsBtn.addEventListener('click', () => {
         randomFillsEnabled = !randomFillsEnabled;
         randomFillsBtn.textContent = randomFillsEnabled ? "Fills ON" : "Fills OFF";
         randomFillsBtn.classList.toggle('toggled-on', randomFillsEnabled);
         renderSongStructureVisual();
+        triggerAutoSave();
     });
     countInBtn.addEventListener('click', () => {
         isCountInEnabled = !isCountInEnabled;
         countInBtn.textContent = isCountInEnabled ? "Count In ON" : "Count In OFF";
         countInBtn.classList.toggle('toggled-on', isCountInEnabled);
+        triggerAutoSave();
     });
     
     document.getElementById('export-song-midi-btn').addEventListener('click', () => {
@@ -2197,15 +2233,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    skinSelect.addEventListener('change', handleSkinChange);
+    skinSelect.addEventListener('change', (e) => {
+        handleSkinChange(e);
+        triggerAutoSave();
+    });
     randomSongBtn.addEventListener('click', generateRandomSong);
     exportSongBtn.addEventListener('click', handleExportSong);
     importSongBtn.addEventListener('click', handleImportSong);
     saveSessionBtn.addEventListener('click', handleSaveSession);
     loadSessionBtn.addEventListener('click', handleLoadSession);
 
-    createGlobalMixerPanel();
-    createSequencer('A', 'A');
+    // Try to load auto-saved session, fall back to initial A sequencer if empty
+    const restored = loadAutoSave();
+    if (!restored) {
+        createGlobalMixerPanel();
+        createSequencer('A', 'A');
+        renderSongStructureVisual();
+    }
     loadExampleSongs();
-    renderSongStructureVisual();
 });
