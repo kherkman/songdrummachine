@@ -11,7 +11,6 @@
         return bytes.reverse();
     }
 
-    // Helper functions to parse layout string structures consistently
     function parseSongStructure(str) {
         const tokens = [];
         let i = 0;
@@ -260,24 +259,15 @@
         return new Uint8Array(fileHeader.concat(trackHeader, trackData));
     }
 
-    function scheduleOfflineNote(ctx, destNode, instrument, buffer, volume, panning, velocity, time, step, bpm, isHumanizeOn, timingHumanizeAmount, velocityHumanizeAmount, swingAmount) {
+    function scheduleOfflineNote(ctx, destNode, instrument, buffer, volume, panning, velocity, time, step, bpm, isHumanizeOn, timingHumanizeAmount, velocityHumanizeAmount, swingAmount, isSingleSample) {
         const source = ctx.createBufferSource();
         source.buffer = buffer;
 
-        const pannerNode = ctx.createStereoPanner();
-        pannerNode.pan.setValueAtTime(panning, time);
+        // 1. Diminish higher frequencies proportionally based on MIDI velocity (Range: 150Hz to 20kHz)
+        const velocityRatio = velocity / 127;
+        let finalCutoff = 150 + Math.pow(velocityRatio, 2) * 19850;
 
-        const gainNode = ctx.createGain();
-        let finalVolume = volume * (velocity / 127);
-
-        if (isHumanizeOn && velocityHumanizeAmount > 0) {
-            const velocityVariation = ((Math.random() - 0.5) * 2 * 0.2 * velocityHumanizeAmount);
-            finalVolume = Math.max(0, finalVolume + velocityVariation);
-        }
-        gainNode.gain.setValueAtTime(Math.min(1.0, finalVolume), time);
-
-        source.connect(pannerNode).connect(gainNode).connect(destNode);
-
+        // Apply pitch variations & microtiming delays if humanized or single-sample (to prevent machine gun effect)
         let timeOffset = 0;
         const sixteenthNoteTime = (60.0 / bpm) / 4.0;
         
@@ -290,6 +280,48 @@
             const timingVariation = (Math.random() - 0.5) * (sixteenthNoteTime * 0.5) * timingHumanizeAmount;
             timeOffset += timingVariation;
         }
+
+        if (isSingleSample) {
+            // Modulate pitch slightly (±3%)
+            source.playbackRate.setValueAtTime(1.0 + (Math.random() - 0.5) * 0.06, time + timeOffset);
+            // Apply subtle cutoff filter variations (±5%)
+            const cutoffVariation = 1.0 + (Math.random() - 0.5) * 0.1;
+            finalCutoff = Math.max(150, Math.min(20000, finalCutoff * cutoffVariation));
+            // Apply microtiming shifts (0 to 4ms)
+            timeOffset += Math.random() * 0.004;
+        }
+
+        if (isHumanizeOn && velocityHumanizeAmount > 0) {
+            const randFactor = 1.0 + (Math.random() - 0.5) * 0.1 * velocityHumanizeAmount;
+            finalCutoff = Math.max(150, Math.min(20000, finalCutoff * randFactor));
+        }
+
+        // Apply the velocity low-pass filter
+        const velocityFilter = ctx.createBiquadFilter();
+        velocityFilter.type = 'lowpass';
+        velocityFilter.frequency.setValueAtTime(finalCutoff, time + timeOffset);
+
+        // Panning
+        const pannerNode = ctx.createStereoPanner();
+        pannerNode.pan.setValueAtTime(panning, time + timeOffset);
+
+        // Volume gain
+        const gainNode = ctx.createGain();
+        let finalVolume = volume * velocityRatio;
+
+        if (isHumanizeOn && velocityHumanizeAmount > 0) {
+            const velocityVariation = ((Math.random() - 0.5) * 2 * 0.15 * velocityHumanizeAmount);
+            finalVolume = Math.max(0, finalVolume + velocityVariation);
+        }
+        if (isSingleSample) {
+            // Slight organic gain drift for repeated single samples (±5%)
+            const volumeDrift = (Math.random() - 0.5) * 0.05;
+            finalVolume = Math.max(0, finalVolume + volumeDrift);
+        }
+        gainNode.gain.setValueAtTime(Math.min(1.0, finalVolume), time + timeOffset);
+
+        // Routing path: Source -> Velocity Filter -> Panner -> Gain -> Mastering Chain/Destination
+        source.connect(velocityFilter).connect(pannerNode).connect(gainNode).connect(destNode);
 
         source.start(time + timeOffset);
     }
@@ -398,7 +430,7 @@
                 let currentStepTime = 0.0;
                 let previousBpm = options.bpm;
 
-                // 1. Calculate duration based on dynamic tempos & glides
+                // 1. Calculate length using active tempos & transitions
                 songBlocks.forEach((block) => {
                     const targetBpm = block.bpm;
                     const steps = block.steps;
@@ -415,24 +447,26 @@
                     previousBpm = targetBpm;
                 });
 
-                totalDuration += 2.0; // Decay margin
+                totalDuration += 3.0; // Dynamic trail margin
 
                 const offlineCtx = new OfflineAudioContext(2, Math.ceil(totalDuration * 44100), 44100);
 
-                // Re-create the master processor inside the OfflineContext to copy processing settings to exported audio
+                // 2. Clone the live mastering chain parameters inside the offline context thread
                 let offlineMaster = null;
                 if (window.MasteringProcessor && options.masteringSettings) {
                     offlineMaster = new window.MasteringProcessor(offlineCtx);
                     
-                    // Mirror UI states
+                    // Copy UI active states
                     offlineMaster.states = { ...options.masteringSettings.states };
                     offlineMaster.satMixValue = options.masteringSettings.satMix;
                     offlineMaster.reverbMixValue = options.masteringSettings.reverbMix;
                     
-                    // Mirror node values
+                    // Direct values mirroring
                     offlineMaster.satNode.curve = offlineMaster.makeDistortionCurve(options.masteringSettings.satDrive);
                     offlineMaster.compNode.threshold.setValueAtTime(options.masteringSettings.compThresh, 0);
                     offlineMaster.compNode.ratio.setValueAtTime(options.masteringSettings.compRatio, 0);
+                    offlineMaster.hpfNode.frequency.setValueAtTime(options.masteringSettings.filterHpf, 0);
+                    offlineMaster.lpfNode.frequency.setValueAtTime(options.masteringSettings.filterLpf, 0);
                     offlineMaster.delayNode.delayTime.setValueAtTime(options.masteringSettings.delayTime, 0);
                     offlineMaster.delayFeedback.gain.setValueAtTime(options.masteringSettings.delayFeedback, 0);
                     offlineMaster.setReverbDecay(options.masteringSettings.reverbDecay);
@@ -445,7 +479,10 @@
                 const destNode = offlineMaster ? offlineMaster.input : offlineCtx.destination;
                 previousBpm = options.bpm;
 
-                // 2. Schedule notes with tempo transitions
+                // Track unique Round Robin counters locally during this offline pass
+                const offlineRoundRobinIndices = {};
+
+                // 3. Render and schedule notes with custom round robins
                 songBlocks.forEach((block) => {
                     const targetBpm = block.bpm;
                     const steps = block.steps;
@@ -453,7 +490,6 @@
 
                     let fillPattern = null;
                     if (block.type === 'fill') {
-                        // Create a deterministic fill pattern for exporting
                         fillPattern = {};
                         options.INSTRUMENTS.forEach(inst => fillPattern[inst] = Array(steps).fill(false));
                         for (let s = 0; s < steps; s++) {
@@ -476,19 +512,38 @@
                         if (block.type === 'intro') {
                             if (step === 0 || step === 4 || step === 8 || step === 12) {
                                 const settings = options.globalMixerSettings['hi-hat-open'];
-                                if (settings && options.audioBuffers['hi-hat-open']) {
-                                    scheduleOfflineNote(offlineCtx, destNode, 'hi-hat-open', options.audioBuffers['hi-hat-open'], settings.volume, settings.panning, 100, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount);
+                                const bufs = options.audioBuffers['hi-hat-open'];
+                                if (settings && bufs && bufs.length > 0) {
+                                    if (!offlineRoundRobinIndices['hi-hat-open']) offlineRoundRobinIndices['hi-hat-open'] = 0;
+                                    const rIdx = offlineRoundRobinIndices['hi-hat-open'];
+                                    const activeBuf = bufs[rIdx];
+                                    offlineRoundRobinIndices['hi-hat-open'] = (rIdx + 1) % bufs.length;
+
+                                    scheduleOfflineNote(offlineCtx, destNode, 'hi-hat-open', activeBuf, settings.volume, settings.panning, 100, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount, bufs.length === 1);
                                 }
                             }
                         } else if (block.type === 'outro') {
                             if (step === 0) {
                                 const kickSet = options.globalMixerSettings['kick'];
-                                const crashSet = options.globalMixerSettings['crash1'];
-                                if (kickSet && options.audioBuffers['kick']) {
-                                    scheduleOfflineNote(offlineCtx, destNode, 'kick', options.audioBuffers['kick'], kickSet.volume, kickSet.panning, 110, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount);
+                                const kickBufs = options.audioBuffers['kick'];
+                                if (kickSet && kickBufs && kickBufs.length > 0) {
+                                    if (!offlineRoundRobinIndices['kick']) offlineRoundRobinIndices['kick'] = 0;
+                                    const rIdx = offlineRoundRobinIndices['kick'];
+                                    const activeBuf = kickBufs[rIdx];
+                                    offlineRoundRobinIndices['kick'] = (rIdx + 1) % kickBufs.length;
+
+                                    scheduleOfflineNote(offlineCtx, destNode, 'kick', activeBuf, kickSet.volume, kickSet.panning, 110, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount, kickBufs.length === 1);
                                 }
-                                if (crashSet && options.audioBuffers['crash1']) {
-                                    scheduleOfflineNote(offlineCtx, destNode, 'crash1', options.audioBuffers['crash1'], crashSet.volume, crashSet.panning, 120, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount);
+
+                                const crashSet = options.globalMixerSettings['crash1'];
+                                const crashBufs = options.audioBuffers['crash1'];
+                                if (crashSet && crashBufs && crashBufs.length > 0) {
+                                    if (!offlineRoundRobinIndices['crash1']) offlineRoundRobinIndices['crash1'] = 0;
+                                    const rIdx = offlineRoundRobinIndices['crash1'];
+                                    const activeBuf = crashBufs[rIdx];
+                                    offlineRoundRobinIndices['crash1'] = (rIdx + 1) % crashBufs.length;
+
+                                    scheduleOfflineNote(offlineCtx, destNode, 'crash1', activeBuf, crashSet.volume, crashSet.panning, 120, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount, crashBufs.length === 1);
                                 }
                             }
                         } else {
@@ -505,8 +560,14 @@
                                 if (step === 0 && block.crashAccent) {
                                     suppressCymbals = true;
                                     const crashSet = options.globalMixerSettings['crash1'];
-                                    if (crashSet && options.audioBuffers['crash1']) {
-                                        scheduleOfflineNote(offlineCtx, destNode, 'crash1', options.audioBuffers['crash1'], crashSet.volume, crashSet.panning, 127, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount);
+                                    const crashBufs = options.audioBuffers['crash1'];
+                                    if (crashSet && crashBufs && crashBufs.length > 0) {
+                                        if (!offlineRoundRobinIndices['crash1']) offlineRoundRobinIndices['crash1'] = 0;
+                                        const rIdx = offlineRoundRobinIndices['crash1'];
+                                        const activeBuf = crashBufs[rIdx];
+                                        offlineRoundRobinIndices['crash1'] = (rIdx + 1) % crashBufs.length;
+
+                                        scheduleOfflineNote(offlineCtx, destNode, 'crash1', activeBuf, crashSet.volume, crashSet.panning, 127, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount, crashBufs.length === 1);
                                     }
                                 }
 
@@ -516,10 +577,17 @@
                                             return;
                                         }
                                         const settings = options.globalMixerSettings[inst];
+                                        const bufs = options.audioBuffers[inst];
                                         const seq = Object.values(options.sequencersData).find(s => s.name === block.name);
                                         const velocity = (seq && seq.velocities[inst]) ? seq.velocities[inst][step] : 100;
-                                        if (settings && options.audioBuffers[inst]) {
-                                            scheduleOfflineNote(offlineCtx, destNode, inst, options.audioBuffers[inst], settings.volume, settings.panning, velocity, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount);
+                                        
+                                        if (settings && bufs && bufs.length > 0) {
+                                            if (!offlineRoundRobinIndices[inst]) offlineRoundRobinIndices[inst] = 0;
+                                            const rIdx = offlineRoundRobinIndices[inst];
+                                            const activeBuf = bufs[rIdx];
+                                            offlineRoundRobinIndices[inst] = (rIdx + 1) % bufs.length;
+
+                                            scheduleOfflineNote(offlineCtx, destNode, inst, activeBuf, settings.volume, settings.panning, velocity, scheduledTime, step, stepBpm, options.isHumanizeOn, options.timingHumanizeAmount, options.velocityHumanizeAmount, options.swingAmount, bufs.length === 1);
                                         }
                                     }
                                 });
@@ -546,6 +614,9 @@
                 console.error("WAV Export Failed:", err);
                 alert("WAV Export Failed: " + err.message);
             }
-        }
+        },
+
+        // Expose buffer conversion utility for directory backups
+        bufferToWav: bufferToWav
     };
 })();
