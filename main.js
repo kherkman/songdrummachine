@@ -244,6 +244,106 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
+    // 1. Define the serialization helper
+    function triggerAutoSave() {
+        try {
+            const sessionData = {
+                version: 1,
+                bpm,
+                songStructure: songStructureInput.value,
+                globalMixerSettings,
+                isHumanizeOn,
+                timingHumanizeAmount,
+                velocityHumanizeAmount,
+                swingAmount,
+                isCountInEnabled,
+                randomFillsEnabled,
+                skinName: skinSelect.value,
+                sequencersData,
+                instrumentNames,
+                INSTRUMENTS
+            };
+            localStorage.setItem('drum_sequencer_autosave', JSON.stringify(sessionData));
+        } catch (e) {
+            console.warn("Auto-save failed:", e);
+        }
+    }
+
+    // 2. Define the restoration loader (call this during initialization)
+    function loadAutoSave() {
+        const saved = localStorage.getItem('drum_sequencer_autosave');
+        if (!saved) return false;
+        try {
+            const sessionData = JSON.parse(saved);
+            if (sessionData.version !== 1) return false;
+
+            bpm = sessionData.bpm;
+            tempoInput.value = bpm;
+            songStructureInput.value = sessionData.songStructure;
+            
+            isHumanizeOn = sessionData.isHumanizeOn;
+            timingHumanizeAmount = sessionData.timingHumanizeAmount;
+            velocityHumanizeAmount = sessionData.velocityHumanizeAmount;
+            swingAmount = sessionData.swingAmount;
+            
+            humanizeBtn.classList.toggle('toggled-on', isHumanizeOn);
+            humanizeBtn.textContent = isHumanizeOn ? "Humanize ON" : "Humanize OFF";
+            timingHumanizeSlider.value = timingHumanizeAmount;
+            velocityHumanizeSlider.value = velocityHumanizeAmount;
+            swingSlider.value = swingAmount;
+
+            isCountInEnabled = sessionData.isCountInEnabled;
+            countInBtn.classList.toggle('toggled-on', isCountInEnabled);
+            countInBtn.textContent = isCountInEnabled ? "Count In ON" : "Count In OFF";
+
+            randomFillsEnabled = sessionData.randomFillsEnabled;
+            randomFillsBtn.classList.toggle('toggled-on', randomFillsEnabled);
+            randomFillsBtn.textContent = randomFillsEnabled ? "Fills ON" : "Fills OFF";
+
+            globalMixerSettings = sessionData.globalMixerSettings;
+            Object.assign(instrumentNames, sessionData.instrumentNames || {});
+            INSTRUMENTS = sessionData.INSTRUMENTS || [...DEFAULT_INSTRUMENTS];
+
+            createGlobalMixerPanel();
+
+            sequencersData = sessionData.sequencersData;
+            for (const id in sequencersData) {
+                const seqData = sequencersData[id];
+                createSequencer(id, seqData.name);
+                sequencersData[id] = seqData;
+                updateSequencerGrid(id, seqData.steps);
+            }
+
+            if (sessionData.skinName && skinsData[sessionData.skinName]) {
+                skinSelect.value = sessionData.skinName;
+                applySkin(skinsData[sessionData.skinName]);
+            }
+
+            renderSongStructureVisual();
+            return true;
+        } catch (e) {
+            console.error("Failed to parse auto-save:", e);
+            return false;
+        }
+    }
+
+    // 3. Register Auto-Save triggers to all state modifications
+    // Map 'triggerAutoSave()' call to:
+    // - Step checkbox 'onchange'
+    // - Velocity slider 'oninput'
+    // - Slider value changes (Volume, Panning, Humanizer, Swing)
+    // - Tempo and Song Structure 'onchange' or 'oninput'
+    // - Adding/removing sequencers or custom instruments
+
+    // 4. Bind the "Reset Everything" button in main.js
+    document.getElementById('reset-everything-btn').addEventListener('click', () => {
+        const confirmation = confirm("Are you sure you want to reset everything? This will delete all custom settings, patterns, and loaded custom samples, reverting to factory defaults.");
+        if (confirmation) {
+            localStorage.removeItem('drum_sequencer_autosave');
+            location.reload();
+        }
+    });
+
     async function loadSample(instrument) {
         try {
             const response = await fetch(`${instrument}.wav`);
